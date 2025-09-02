@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using SFA.Infrastructure;
 using Serilog;
+using SFA.Api.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +40,8 @@ if (app.Environment.IsDevelopment())
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<SfaDbContext>();
     db.Database.Migrate();
+    
+    await DbInitializer.SeedAsync(db);
 }
 
 app.UseSerilogRequestLogging();
@@ -49,6 +52,14 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // Health
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+app.MapGet("/health/db", async (SfaDbContext db) =>
+{
+  var canConnect = await db.Database.CanConnectAsync();
+  return canConnect 
+    ? Results.Ok(new { status = "ok", db = "connected" })
+    : Results.Problem("Database unavailable");
+});
+
+app.MapAuthEndpoints();
 
 app.Run();

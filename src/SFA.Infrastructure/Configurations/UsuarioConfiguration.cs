@@ -15,6 +15,8 @@ public class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
         builder.Property(x => x.Login).IsRequired().HasMaxLength(120);
         builder.Property(x => x.Nome).IsRequired().HasMaxLength(200);
         builder.Property(x => x.PasswordHash).IsRequired();
+        builder.Property(x => x.CriadoEm)
+          .HasDefaultValueSql("now()");
 
         builder.HasIndex(x => new { x.CodEmpresa, x.Login }).IsUnique();
     }

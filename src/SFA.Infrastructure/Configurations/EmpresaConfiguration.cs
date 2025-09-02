@@ -11,6 +11,8 @@ public class EmpresaConfiguration : IEntityTypeConfiguration<Empresa>
         builder.ToTable("empresa");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Nome).IsRequired().HasMaxLength(200);
+        builder.Property(x => x.CriadoEm)
+          .HasDefaultValueSql("now()");
         builder.HasIndex(x => x.Nome).IsUnique(false);
     }
 }
