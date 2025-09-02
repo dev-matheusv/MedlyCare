@@ -1,0 +1,16 @@
+
+# Build / VS / Rider
+bin/
+obj/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs
+
+# Logs
+*.log
+logs/
+
+# Secrets
+**/appsettings.*.Local.json

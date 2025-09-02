@@ -1,0 +1,33 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sfa_postgres
+    environment:
+      POSTGRES_DB: sfa_db
+      POSTGRES_USER: sfa
+      POSTGRES_PASSWORD: sfa
+    ports:
+      - "5432:5432"
+    volumes:
+      - sfa_db_data:/var/lib/postgresql/data
+      - ./scripts/sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sfa -d sfa_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:8.6
+    container_name: sfa_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@sfa.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+volumes:
+  sfa_db_data:
