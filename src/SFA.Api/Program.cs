@@ -8,6 +8,7 @@ using SFA.Api.Auth;
 using SFA.Api.Endpoints;
 using SFA.Application.Auth;
 using SFA.Infrastructure;
+using FluentValidation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -80,6 +81,10 @@ builder.Services.AddSwaggerGen(c =>
   });
 });
 
+builder.Services.AddValidatorsFromAssembly(
+  typeof(SFA.Application.Empresas.EmpresaCreateValidator).Assembly
+);
+
 var app = builder.Build();
 
 // Migrar banco automaticamente em dev (opcional)
@@ -137,5 +142,6 @@ app.MapGet("/api/v1/empresas/segredo", () => Results.Ok("acesso admin"))
 app.MapGet("/api/v1/admin/ping", () => "ok").RequireAuthorization("Admin");
 
 app.MapAuthEndpoints();
+app.MapEmpresaEndpoints();
 
 app.Run();
