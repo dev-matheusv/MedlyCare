@@ -9,6 +9,9 @@ public class SfaDbContext : DbContext
 
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
+    public DbSet<Perfil> Perfis => Set<Perfil>();
+    public DbSet<UsuarioPerfil> UsuariosPerfis => Set<UsuarioPerfil>();
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -57,6 +57,47 @@ namespace SFA.Infrastructure.Migrations
                     b.ToTable("empresa", (string)null);
                 });
 
+            modelBuilder.Entity("SFA.Domain.Entities.Perfil", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Ativo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("ativo");
+
+                    b.Property<int>("CodEmpresa")
+                        .HasColumnType("integer")
+                        .HasColumnName("cod_empresa");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("nome");
+
+                    b.HasKey("Id")
+                        .HasName("pk_perfil");
+
+                    b.HasIndex("CodEmpresa", "Nome")
+                        .IsUnique()
+                        .HasDatabaseName("ix_perfil_cod_empresa_nome");
+
+                    b.ToTable("perfil", (string)null);
+                });
+
             modelBuilder.Entity("SFA.Domain.Entities.Usuario", b =>
                 {
                     b.Property<int>("Id")
@@ -105,6 +146,56 @@ namespace SFA.Infrastructure.Migrations
                         .HasDatabaseName("ix_usuario_cod_empresa_login");
 
                     b.ToTable("usuario", (string)null);
+                });
+
+            modelBuilder.Entity("SFA.Domain.Entities.UsuarioPerfil", b =>
+                {
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("integer")
+                        .HasColumnName("usuario_id");
+
+                    b.Property<int>("PerfilId")
+                        .HasColumnType("integer")
+                        .HasColumnName("perfil_id");
+
+                    b.HasKey("UsuarioId", "PerfilId")
+                        .HasName("pk_usuario_perfil");
+
+                    b.HasIndex("PerfilId")
+                        .HasDatabaseName("ix_usuario_perfil_perfil_id");
+
+                    b.ToTable("usuario_perfil", (string)null);
+                });
+
+            modelBuilder.Entity("SFA.Domain.Entities.UsuarioPerfil", b =>
+                {
+                    b.HasOne("SFA.Domain.Entities.Perfil", "Perfil")
+                        .WithMany("UsuariosPerfis")
+                        .HasForeignKey("PerfilId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_usuario_perfil_perfil_perfil_id");
+
+                    b.HasOne("SFA.Domain.Entities.Usuario", "Usuario")
+                        .WithMany("UsuariosPerfis")
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_usuario_perfil_usuario_usuario_id");
+
+                    b.Navigation("Perfil");
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("SFA.Domain.Entities.Perfil", b =>
+                {
+                    b.Navigation("UsuariosPerfis");
+                });
+
+            modelBuilder.Entity("SFA.Domain.Entities.Usuario", b =>
+                {
+                    b.Navigation("UsuariosPerfis");
                 });
 #pragma warning restore 612, 618
         }

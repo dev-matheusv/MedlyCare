@@ -47,8 +47,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 // 3) Registrar o serviço concreto para a interface da Application
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
-builder.Services.AddAuthorizationBuilder()
-    .AddPolicy("Admin", p => p.RequireRole("Admin"));
+builder.Services.AddAuthorization(o =>
+{
+  o.AddPolicy("Admin", p => p.RequireRole("Admin"));
+  o.AddPolicy("Profissional", p => p.RequireRole("Profissional"));
+  o.AddPolicy("Recepcao", p => p.RequireRole("Recepcao"));
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

@@ -12,7 +12,7 @@ public static class AuthEndpoints
   public static void MapAuthEndpoints(this IEndpointRouteBuilder routes)
   {
     var group = routes.MapGroup("/api/v1/auth");
-
+    
     group.MapPost("/login", async (LoginRequest req, SfaDbContext db, IJwtTokenService jwtSvc) =>
     {
       var user = await db.Usuarios
@@ -29,11 +29,21 @@ public static class AuthEndpoints
       var valid = (bool)(await cmd.ExecuteScalarAsync() ?? false);
       if (!valid) return Results.Unauthorized();
 
-      // TODO: buscar roles reais quando criar perfis; por ora, “Admin”
-      var roles = new[] { "Admin" };
+      // ✅ Buscar roles reais do usuário (mesma empresa, perfil ativo)
+      var roles = await db.UsuariosPerfis
+        .Where(up => up.UsuarioId == user.Id
+                     && up.Perfil.CodEmpresa == user.CodEmpresa
+                     && up.Perfil.Ativo)
+        .Select(up => up.Perfil.Nome)
+        .ToListAsync();
+
+      // ✅ Política recomendada: sem papel, sem login
+      if (roles.Count == 0) return Results.Forbid();
+
       var token = jwtSvc.CreateToken(user.Id, user.CodEmpresa, user.Nome, roles);
       return Results.Ok(new { access_token = token.AccessToken, token_type = token.TokenType, expires_at_utc = token.ExpiresAtUtc });
     });
+
     group.MapGet("/me", (ClaimsPrincipal user) =>
     {
       var userId = user.FindFirstValue(ClaimTypes.NameIdentifier)

@@ -9,4 +9,6 @@ public class Usuario
     public string PasswordHash { get; set; } = null!; // pgcrypto (bcrypt)
     public bool Ativo { get; set; } = true;
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
+    
+    public ICollection<UsuarioPerfil> UsuariosPerfis { get; set; } = [];
 }
