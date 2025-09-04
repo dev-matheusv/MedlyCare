@@ -143,5 +143,6 @@ app.MapGet("/api/v1/admin/ping", () => "ok").RequireAuthorization("Admin");
 
 app.MapAuthEndpoints();
 app.MapEmpresaEndpoints();
+app.MapUsuarioEndpoints();
 
 app.Run();
