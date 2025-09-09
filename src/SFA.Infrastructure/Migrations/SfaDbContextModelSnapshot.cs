@@ -57,6 +57,69 @@ namespace SFA.Infrastructure.Migrations
                     b.ToTable("empresa", (string)null);
                 });
 
+            modelBuilder.Entity("SFA.Domain.Entities.Paciente", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Ativo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("ativo");
+
+                    b.Property<int>("CodEmpresa")
+                        .HasColumnType("integer")
+                        .HasColumnName("cod_empresa");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<DateOnly?>("DataNascimento")
+                        .HasColumnType("date")
+                        .HasColumnName("data_nascimento");
+
+                    b.Property<string>("Documento")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("documento");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(180)
+                        .HasColumnType("character varying(180)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("nome");
+
+                    b.Property<string>("Telefone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("telefone");
+
+                    b.HasKey("Id")
+                        .HasName("pk_paciente");
+
+                    b.HasIndex("CodEmpresa", "Documento")
+                        .HasDatabaseName("ix_paciente_cod_empresa_documento");
+
+                    b.HasIndex("CodEmpresa", "Nome")
+                        .HasDatabaseName("ix_paciente_cod_empresa_nome");
+
+                    b.ToTable("paciente", (string)null);
+                });
+
             modelBuilder.Entity("SFA.Domain.Entities.Perfil", b =>
                 {
                     b.Property<int>("Id")
