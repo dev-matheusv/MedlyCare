@@ -9,6 +9,7 @@ using SFA.Api.Endpoints;
 using SFA.Application.Auth;
 using SFA.Infrastructure;
 using FluentValidation;
+using SFA.Api.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -100,6 +101,8 @@ if (app.Environment.IsDevelopment())
     
     await DbInitializer.SeedAsync(db);
 }
+
+app.UseErrorHandling();
 
 app.UseSerilogRequestLogging();
 app.UseSwagger();
