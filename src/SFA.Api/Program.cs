@@ -152,5 +152,7 @@ app.MapAuthEndpoints();
 app.MapEmpresaEndpoints();
 app.MapUsuarioEndpoints();
 app.MapPacienteEndpoints();
+app.MapPerfilEndpoints();
+app.MapUsuarioPerfilEndpoints();
 
 app.Run();
