@@ -22,6 +22,9 @@ Focado em **segurança, escalabilidade e boas práticas**, traz:
 - Observabilidade: **Serilog + OpenTelemetry**.  
 - Deploy e dev com **Docker Compose**.
 
+> ℹ️ Nota: Este repositório está aberto temporariamente para portfólio.  
+> O projeto segue em evolução e poderá ser privado futuramente.
+
 ---
 
 ## 🛠️ Tecnologias
