@@ -296,7 +296,7 @@ public static class AgendamentoEndpoints
                           ap.a.PacienteId,
                           ap.a.ProfissionalId,
                           ap.a.Observacoes,
-                          PacienteNome = ap.PacienteNome,
+                          ap.PacienteNome,
                           ProfNome = prof.Nome
                       })
                 .OrderBy(x => x.InicioUtc)
@@ -317,6 +317,133 @@ public static class AgendamentoEndpoints
                 .ToListAsync();
 
             return Results.Ok(events);
+        });
+        
+        // GET /agendamentos/slots
+        g.MapGet("/slots", async (ClaimsPrincipal u,
+          int? profissionalId,
+          DateOnly data,
+          SfaDbContext db,
+          int duracaoMin = 30,
+          string inicioDia = "08:00",
+          string fimDia = "18:00",
+          int passoMin = 15) =>
+        {
+            var codEmp = GetCodEmpresa(u);
+
+            // Se for Profissional sem profissionalId informado, usa o próprio userId
+            if (IsProfissionalOnly(u))
+            {
+                var uid = GetUserId(u) ?? 0;
+                profissionalId ??= uid;
+                if (profissionalId.Value != uid) return Results.Forbid();
+            }
+            else
+            {
+                if (profissionalId is null || profissionalId <= 0)
+                    return Results.BadRequest(new { message = "profissional_id_obrigatorio" });
+            }
+
+            // Valida profissional ativo na empresa
+            var profissionalOk = await db.Usuarios
+                .AsNoTracking()
+                .AnyAsync(p => p.Id == profissionalId && p.CodEmpresa == codEmp && p.Ativo);
+            if (!profissionalOk) return Results.NotFound(new { message = "profissional_nao_encontrado" });
+
+            // Intervalo do dia (UTC)
+            static bool TryParseHm(string hm, out int h, out int m)
+            {
+                h = m = 0;
+                var parts = hm.Split(':', 2);
+                return parts.Length == 2
+                       && int.TryParse(parts[0], out h) && int.TryParse(parts[1], out m)
+                       && h >= 0 && h <= 23 && m >= 0 && m <= 59;
+            }
+
+            if (!TryParseHm(inicioDia, out var hIni, out var mIni) ||
+                !TryParseHm(fimDia, out var hFim, out var mFim))
+                return Results.BadRequest(new { message = "horario_invalido_use_HH:mm" });
+
+            var dayStartUtc = new DateTimeOffset(data.Year, data.Month, data.Day, hIni, mIni, 0, TimeSpan.Zero);
+            var dayEndUtc   = new DateTimeOffset(data.Year, data.Month, data.Day, hFim, mFim, 0, TimeSpan.Zero);
+
+            if (dayEndUtc <= dayStartUtc)
+                return Results.BadRequest(new { message = "fim_menor_ou_igual_ao_inicio" });
+
+            var dur = TimeSpan.FromMinutes(Math.Max(1, duracaoMin));
+            var step = TimeSpan.FromMinutes(Math.Clamp(passoMin, 1, 120));
+
+            // Busca agendamentos do dia para o profissional (exceto cancelados)
+            var agends = await db.Agendamentos.AsNoTracking()
+                .Where(a => a.CodEmpresa == codEmp
+                            && a.ProfissionalId == profissionalId
+                            && a.Status != "cancelado"
+                            && a.FimUtc > dayStartUtc
+                            && a.InicioUtc < dayEndUtc)
+                .Select(a => new { a.InicioUtc, a.FimUtc })
+                .OrderBy(a => a.InicioUtc)
+                .ToListAsync();
+
+            // Normaliza e mescla intervalos ocupados dentro da janela do dia
+            var ocupados = new List<(DateTimeOffset start, DateTimeOffset end)>();
+            foreach (var a in agends)
+            {
+                var s = a.InicioUtc < dayStartUtc ? dayStartUtc : a.InicioUtc;
+                var e = a.FimUtc   > dayEndUtc   ? dayEndUtc   : a.FimUtc;
+                if (e <= s) continue;
+
+                if (ocupados.Count == 0 || s > ocupados[^1].end)
+                {
+                    ocupados.Add((s, e));
+                }
+                else
+                {
+                    // mescla com o último
+                    var last = ocupados[^1];
+                    ocupados[^1] = (last.start, e > last.end ? e : last.end);
+                }
+            }
+
+            // Gera slots livres “descontando” os ocupados
+            var livres = new List<object>();
+            var cursor = dayStartUtc;
+
+            void EmitirBlocoLivre(DateTimeOffset from, DateTimeOffset to)
+            {
+                // Gera slots de tamanho "dur" pulando de "step"
+                for (var start = from; start + dur <= to; start += step)
+                {
+                    var end = start + dur;
+                    livres.Add(new
+                    {
+                        start,
+                        end,
+                        minutes = (int)dur.TotalMinutes
+                    });
+                }
+            }
+
+            foreach (var (start, end) in ocupados)
+            {
+                if (cursor < start)
+                    EmitirBlocoLivre(cursor, start);
+
+                if (end > cursor) cursor = end;
+            }
+
+            if (cursor < dayEndUtc)
+                EmitirBlocoLivre(cursor, dayEndUtc);
+
+            return Results.Ok(new
+            {
+                profissionalId = profissionalId.Value,
+                data,
+                inicioDia = dayStartUtc,
+                fimDia = dayEndUtc,
+                duracaoMin = (int)dur.TotalMinutes,
+                passoMin = (int)step.TotalMinutes,
+                slots = livres
+            });
         });
     }
 }
