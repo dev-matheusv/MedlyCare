@@ -252,5 +252,71 @@ public static class AgendamentoEndpoints
             await db.SaveChangesAsync();
             return Results.NoContent();
         });
+        
+        g.MapGet("/events", async (ClaimsPrincipal u,
+                           DateTimeOffset de,
+                           DateTimeOffset ate,
+                           int? profissionalId,
+                           int? pacienteId,
+                           string? status,
+                           SfaDbContext db) =>
+        {
+            var codEmp = GetCodEmpresa(u);
+
+            var q = db.Agendamentos.AsNoTracking()
+                .Where(a => a.CodEmpresa == codEmp &&
+                            a.FimUtc > de && a.InicioUtc < ate);
+
+            if (IsProfissionalOnly(u))
+            {
+                var uid = GetUserId(u) ?? 0;
+                q = q.Where(a => a.ProfissionalId == uid);
+            }
+            else if (profissionalId.HasValue)
+            {
+                q = q.Where(a => a.ProfissionalId == profissionalId.Value);
+            }
+
+            if (pacienteId.HasValue) q = q.Where(a => a.PacienteId == pacienteId.Value);
+            if (!string.IsNullOrWhiteSpace(status)) q = q.Where(a => a.Status == status);
+
+            // projetar com nomes (join leve)
+            var events = await q
+                .Join(db.Pacientes.AsNoTracking(),
+                      a => a.PacienteId, p => p.Id,
+                      (a, p) => new { a, PacienteNome = p.Nome })
+                .Join(db.Usuarios.AsNoTracking(),
+                      ap => ap.a.ProfissionalId, u2 => u2.Id,
+                      (ap, prof) => new
+                      {
+                          ap.a.Id,
+                          ap.a.InicioUtc,
+                          ap.a.FimUtc,
+                          ap.a.Status,
+                          ap.a.PacienteId,
+                          ap.a.ProfissionalId,
+                          ap.a.Observacoes,
+                          PacienteNome = ap.PacienteNome,
+                          ProfNome = prof.Nome
+                      })
+                .OrderBy(x => x.InicioUtc)
+                .Select(x => new
+                {
+                  id = x.Id,
+                  title = $"{x.PacienteNome} • {x.ProfNome}",
+                  start = x.InicioUtc,
+                  end   = x.FimUtc,
+                  status = x.Status,
+                  color = x.Status == "confirmado" ? "#22c55e"
+                    : x.Status == "cancelado"  ? "#ef4444"
+                    : "#3b82f6",
+                  pacienteId = x.PacienteId,
+                  profissionalId = x.ProfissionalId,
+                  observacoes = x.Observacoes
+                })
+                .ToListAsync();
+
+            return Results.Ok(events);
+        });
     }
 }
