@@ -19,7 +19,7 @@ public static class DbInitializer
     {
       // Gera hash bcrypt usando pgcrypto
       var hash = await db.Database
-        .SqlQuery<string>($"SELECT crypt(admin123, gen_salt('bf'))")
+        .SqlQuery<string>($"SELECT crypt('admin123', gen_salt('bf')) AS hash")
         .FirstAsync();
 
       db.Usuarios.Add(new Usuario

@@ -22,7 +22,7 @@ services:
     image: dpage/pgadmin4:8.6
     container_name: sfa_pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@sfa.local
+      PGADMIN_DEFAULT_EMAIL: admin@sfa.com
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
       - "5050:80"
