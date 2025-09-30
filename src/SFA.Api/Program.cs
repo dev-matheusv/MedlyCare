@@ -28,13 +28,11 @@ builder.Services.AddDbContext<SfaDbContext>(o =>
 // Config do cors pro front
 builder.Services.AddCors(options =>
 {
-  options.AddPolicy("AllowMobileApplication", policy =>
-    {
-      policy.WithOrigins("http://localhost:9000")
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowCredentials();
-    });
+  options.AddPolicy("AllowFrontend", policy =>
+    policy.WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()!)
+      .AllowAnyHeader()
+      .AllowAnyMethod()
+      .AllowCredentials());
 });
 
 // 1) Bind options

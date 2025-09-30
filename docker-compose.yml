@@ -3,16 +3,16 @@ services:
     image: postgres:16-alpine
     container_name: sfa_postgres
     environment:
-      POSTGRES_DB: sfa_db
-      POSTGRES_USER: sfa
-      POSTGRES_PASSWORD: sfa
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - sfa_db_data:/var/lib/postgresql/data
       - ./scripts/sql:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sfa -d sfa_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 10

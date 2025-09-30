@@ -14,3 +14,6 @@ logs/
 
 # Secrets
 **/appsettings.*.Local.json
+
+# dotenv
+.env

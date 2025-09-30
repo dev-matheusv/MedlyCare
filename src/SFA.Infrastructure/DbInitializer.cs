@@ -17,10 +17,13 @@ public static class DbInitializer
 
     if (!await db.Usuarios.AnyAsync())
     {
-      // Gera hash bcrypt usando pgcrypto
+      // senha seed (apenas dev)
+      var plain = "admin123";
+
+      // EF Core 8: SqlQuery<T> + interpolated => parâmetros (seguro)
       var hash = await db.Database
-        .SqlQuery<string>($"SELECT crypt('admin123', gen_salt('bf')) AS \"Value\"")
-        .FirstAsync();
+        .SqlQuery<string>($"SELECT crypt({plain}, gen_salt('bf')) AS ok")
+        .FirstAsync(); // mapeia a única coluna para string, indep. do nome
 
       db.Usuarios.Add(new Usuario
       {
@@ -32,8 +35,7 @@ public static class DbInitializer
       });
       await db.SaveChangesAsync();
     }
-    
-    // Perfis padrão da empresa 1
+
     if (!await db.Perfis.AnyAsync(p => p.CodEmpresa == 1))
     {
       db.Perfis.AddRange(
@@ -44,7 +46,6 @@ public static class DbInitializer
       await db.SaveChangesAsync();
     }
 
-// Vincular admin ao perfil Admin
     var admin = await db.Usuarios.FirstAsync(u => u.CodEmpresa == 1 && u.Login == "admin@sfa");
     var adminPerfil = await db.Perfis.FirstAsync(p => p.CodEmpresa == 1 && p.Nome == "Admin");
 
