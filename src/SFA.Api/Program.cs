@@ -25,6 +25,18 @@ builder.Services.AddDbContext<SfaDbContext>(o =>
     o.UseSnakeCaseNamingConvention();
 });
 
+// Config do cors pro front
+builder.Services.AddCors(options =>
+{
+  options.AddPolicy("AllowMobileApplication", policy =>
+    {
+      policy.WithOrigins("http://localhost:9000")
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials();
+    });
+});
+
 // 1) Bind options
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 var jwt = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()!;
@@ -107,6 +119,9 @@ app.UseErrorHandling();
 app.UseSerilogRequestLogging();
 app.UseSwagger();
 app.UseSwaggerUI();
+
+app.UseRouting();
+app.UseCors("AllowMobileApplication");
 
 app.UseAuthentication();
 app.UseAuthorization();
