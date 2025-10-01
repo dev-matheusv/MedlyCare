@@ -1,12 +1,11 @@
-using System.Data;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.JsonWebTokens;
-using Npgsql;
-using NpgsqlTypes;
 using SFA.Application.Auth;
-using SFA.Domain.Entities;
 using SFA.Infrastructure;
+using Microsoft.OpenApi.Any;
+using Microsoft.OpenApi.Models;
 
 namespace SFA.Api.Endpoints;
 
@@ -14,20 +13,26 @@ public static class AuthEndpoints
 {
   public static void MapAuthEndpoints(this IEndpointRouteBuilder routes)
   {
+    static IResult ApiError(string code, string message, int statusCode) =>
+      Results.Json(new { code, message }, statusCode: statusCode);
+
     var group = routes.MapGroup("/api/v1/auth");
     
     group.MapPost("/login", async (LoginRequest req, SfaDbContext db, IJwtTokenService jwtSvc) =>
     {
-        var login = (req.Login).Trim();
-        if (string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(req.Password))
-            return Results.BadRequest(new { message = "credenciais_invalidas" });
+        // helper local já declarado no topo do método
+        // static IResult ApiError(...)
 
-        // 0 ou negativos => considera como não informado
+        var login = req.Login.Trim();
+        if (string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(req.Password))
+            return ApiError("invalid_request", "credenciais_invalidas", StatusCodes.Status400BadRequest);
+
+        // normaliza codEmpresa: <=0 => não informado
         int? codEmpNormalized = (req.CodEmpresa.HasValue && req.CodEmpresa.Value > 0)
             ? req.CodEmpresa.Value
             : null;
 
-        Usuario? user;
+        Domain.Entities.Usuario? user;
 
         if (codEmpNormalized is { } codEmp)
         {
@@ -36,7 +41,8 @@ public static class AuthEndpoints
                 u.Ativo &&
                 (u.Login == login || EF.Functions.ILike(u.Login, login))
             );
-            if (user is null) return Results.NotFound("user_not_found");
+            if (user is null)
+                return ApiError("user_not_found", "Usuário não encontrado.", StatusCodes.Status404NotFound);
         }
         else
         {
@@ -45,20 +51,25 @@ public static class AuthEndpoints
                 .Select(u => new { u.Id })
                 .ToListAsync();
 
-            if (matches.Count == 0) return Results.NotFound("user_not_found");
-            if (matches.Count > 1) return Results.Conflict(new { message = "login_ambiguous" });
+            if (matches.Count == 0)
+                return ApiError("user_not_found", "Usuário não encontrado.", StatusCodes.Status404NotFound);
 
-            var id = matches[0].Id;
-            user = await db.Usuarios.FirstAsync(u => u.Id == id);
+            if (matches.Count > 1)
+                return ApiError("login_ambiguous", "Mesmo login em múltiplas empresas.", StatusCodes.Status409Conflict);
+
+            user = await db.Usuarios.FirstAsync(u => u.Id == matches[0].Id);
         }
 
-        await using var conn = (NpgsqlConnection)db.Database.GetDbConnection();
-        if (conn.State != ConnectionState.Open) await conn.OpenAsync();
-        await using var cmd = new NpgsqlCommand("SELECT crypt(@p, @h) = @h", conn);
-        cmd.Parameters.AddWithValue("p", NpgsqlDbType.Text, req.Password);
-        cmd.Parameters.AddWithValue("h", NpgsqlDbType.Text, user.PasswordHash);
+        // valida senha (pgcrypto)
+        await using var conn = (Npgsql.NpgsqlConnection)db.Database.GetDbConnection();
+        if (conn.State != System.Data.ConnectionState.Open) await conn.OpenAsync();
+        await using var cmd = new Npgsql.NpgsqlCommand("SELECT crypt(@p, @h) = @h", conn);
+        cmd.Parameters.AddWithValue("p", NpgsqlTypes.NpgsqlDbType.Text, req.Password);
+        cmd.Parameters.AddWithValue("h", NpgsqlTypes.NpgsqlDbType.Text, user.PasswordHash);
+
         var valid = (bool)(await cmd.ExecuteScalarAsync() ?? false);
-        if (!valid) return Results.Unauthorized();
+        if (!valid)
+            return ApiError("invalid_credentials", "Credenciais inválidas.", StatusCodes.Status401Unauthorized);
 
         var roles = await db.UsuariosPerfis
             .Where(up => up.UsuarioId == user.Id)
@@ -73,8 +84,56 @@ public static class AuthEndpoints
             token_type = token.TokenType,
             expires_at_utc = token.ExpiresAtUtc
         });
-    });
+    }).WithSummary("Autentica e retorna um JWT")
+    .WithDescription("Se `codEmpresa` não for informado ou for <= 0, a empresa é inferida pelo login.")
+    .Produces(StatusCodes.Status200OK)
+    .Produces(StatusCodes.Status400BadRequest)
+    .Produces(StatusCodes.Status401Unauthorized)
+    .Produces(StatusCodes.Status404NotFound)
+    .Produces(StatusCodes.Status409Conflict)
+    .WithOpenApi(op =>
+    {
+      // exemplo: login sem codEmpresa
+      var exSemCodEmpresa = new OpenApiObject
+      {
+        ["login"] = new OpenApiString("admin@sfa"),
+        ["password"] = new OpenApiString("admin123")
+      };
 
+      // exemplo: login com codEmpresa explícito
+      var exComCodEmpresa = new OpenApiObject
+      {
+        ["codEmpresa"] = new OpenApiInteger(1),
+        ["login"] = new OpenApiString("admin@sfa"),
+        ["password"] = new OpenApiString("admin123")
+      };
+
+      op.RequestBody = new OpenApiRequestBody
+      {
+        Required = true,
+        Content =
+        {
+          ["application/json"] = new OpenApiMediaType
+          {
+            Examples =
+            {
+              ["semCodEmpresa"] = new OpenApiExample
+              {
+                Summary = "Login sem codEmpresa (recomendado)",
+                Value = exSemCodEmpresa
+              },
+              ["comCodEmpresa"] = new OpenApiExample
+              {
+                Summary = "Login com codEmpresa explícito (compatível)",
+                Value = exComCodEmpresa
+              }
+            }
+          }
+        }
+      };
+      return op;
+    });
+    
     group.MapGet("/me", (ClaimsPrincipal user) =>
     {
       var userId = user.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -85,5 +144,9 @@ public static class AuthEndpoints
       return Results.Ok(new { userId, codEmpresa, nome, roles });
     }).RequireAuthorization();
   }
-  public record LoginRequest(int? CodEmpresa, string Login, string Password);
+
+  public record LoginRequest(
+    int? CodEmpresa,
+    [Required, MaxLength(200)] string Login,
+    [Required, MaxLength(200)] string Password);
 }
