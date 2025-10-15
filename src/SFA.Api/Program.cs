@@ -26,13 +26,36 @@ builder.Services.AddDbContext<SfaDbContext>(o =>
 });
 
 // Config do cors pro front
+// Lê AllowedOrigins tanto como array (Cors:AllowedOrigins:0,1,2) quanto como CSV (Cors:AllowedOrigins)
+string[]? allowedArray = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+var allowedCsv = builder.Configuration["Cors:AllowedOrigins"];
+
+string[] allowed =
+  allowedArray is { Length: > 0 }
+    ? allowedArray
+    : (allowedCsv?.Split(',', ';', ' ',
+      (char)(StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) ?? Array.Empty<string>());
+
 builder.Services.AddCors(options =>
 {
   options.AddPolicy("AllowFrontend", policy =>
-    policy.WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()!)
-      .AllowAnyHeader()
-      .AllowAnyMethod()
-      .AllowCredentials());
+  {
+    if (allowed.Length > 0)
+    {
+      policy.WithOrigins(allowed)
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials(); // só quando há origens explícitas
+    }
+    else
+    {
+      // fallback seguro: libera sem credenciais
+      policy.AllowAnyOrigin()
+        .AllowAnyHeader()
+        .AllowAnyMethod();
+      // NÃO usar AllowCredentials com AllowAnyOrigin
+    }
+  });
 });
 
 // 1) Bind options
