@@ -119,7 +119,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseRouting();
-app.UseCors("AllowMobileApplication");
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
