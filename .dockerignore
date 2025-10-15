@@ -1,0 +1,54 @@
+# --- Git / VCS ---
+.git
+.gitignore
+.gitattributes
+
+# --- IDE / tooling ---
+.vscode/
+.idea/
+*.user
+*.suo
+*.sln.docstates
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+
+# --- Docker ---
+Dockerfile*
+.dockerignore
+
+# --- .NET build artifacts ---
+**/bin/
+**/obj/
+**/out/
+**/TestResults/
+**/*.trx
+**/*.coverage
+**/*.coveragexml
+
+# --- Logs / temp ---
+**/*.log
+logs/
+temp/
+tmp/
+
+# --- Secrets (garanta que não versiona!) ---
+*.secret.json
+secrets.json
+appsettings.*.local.json
+
+# --- Node/Frontend (caso o repo tenha o Vue) ---
+**/node_modules/
+**/.npm/
+**/.pnpm-store/
+**/dist/
+**/.next/
+**/.nuxt/
+**/coverage/
+
+# --- Misc ---
+*.swp
+*.swn
+*.swm
+*.swo

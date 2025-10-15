@@ -1,0 +1,55 @@
+{
+  "family": "sfa-api-staging",
+  "networkMode": "awsvpc",
+  "cpu": "256",
+  "memory": "512",
+  "requiresCompatibilities": ["FARGATE"],
+  "executionRoleArn": "arn:aws:iam::395359594148:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::395359594148:role/sfaAppTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "sfa-api",
+      "image": "395359594148.dkr.ecr.sa-east-1.amazonaws.com/sfa-api:CHANGE_ME",
+      "portMappings": [
+        { "containerPort": 8080, "protocol": "tcp" }
+      ],
+      "essential": true,
+      "environment": [
+        { "name": "ASPNETCORE_ENVIRONMENT", "value": "Staging" }
+      ],
+      "secrets": [
+        {
+          "name": "ConnectionStrings__Default",
+          "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:ConnectionStrings__Default::"
+        },
+        {
+          "name": "Jwt__Secret",
+          "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:Jwt__Secret::"
+        },
+        {
+          "name": "Jwt__Issuer",
+          "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:Jwt__Issuer::"
+        },
+        {
+          "name": "Jwt__Audience",
+          "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:Jwt__Audience::"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/sfa-api-staging",
+          "awslogs-region": "sa-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -fsS http://localhost:8080/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 20
+      }
+    }
+  ]
+}

@@ -148,6 +148,8 @@ app.Use(async (ctx, next) =>
 });
 
 // Health
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
 app.MapGet("/health/db", async (SfaDbContext db) =>
 {
   var canConnect = await db.Database.CanConnectAsync();
