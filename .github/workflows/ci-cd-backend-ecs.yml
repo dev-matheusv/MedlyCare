@@ -1,0 +1,59 @@
+name: ci-cd-backend-ecs
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "src/SFA.Api/**"
+      - "src/SFA.*/*"
+      - "SFA.sln"
+      - "ecs-taskdef.json"
+      - ".github/workflows/ci-cd-backend-ecs.yml"
+
+jobs:
+  build-test-push-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: sa-east-1
+      ECR_REPOSITORY: sfa-api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - run: dotnet restore SFA.sln --nologo
+      - run: dotnet build -c Release --no-restore
+      - run: dotnet test -c Release --no-build
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+
+      - name: Build & Push (SHA + alias staging)
+        run: |
+          REG=${{ steps.ecr.outputs.registry }}
+          IMAGE_SHA=$REG/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          IMAGE_ALIAS=$REG/${{ env.ECR_REPOSITORY }}:staging
+          docker build -f src/SFA.Api/Dockerfile -t $IMAGE_SHA -t $IMAGE_ALIAS .
+          docker push $IMAGE_SHA
+          docker push $IMAGE_ALIAS
+          echo "IMAGE=$IMAGE_SHA" >> $GITHUB_ENV
+
+      - name: Render taskdef
+        run: jq --arg IMG "$IMAGE" '.containerDefinitions[0].image = $IMG' ecs-taskdef.json > taskdef.out.json
+
+      - name: Deploy ECS
+        run: |
+          NEW_TD=$(aws ecs register-task-definition --cli-input-json file://taskdef.out.json)
+          FAMILY=$(echo "$NEW_TD" | jq -r '.taskDefinition.family')
+          REV=$(echo "$NEW_TD" | jq -r '.taskDefinition.revision')
+          aws ecs update-service --cluster ${{ secrets.ECS_CLUSTER }} --service ${{ secrets.ECS_SERVICE }} --task-definition ${FAMILY}:${REV}
