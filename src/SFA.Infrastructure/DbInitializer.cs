@@ -22,7 +22,7 @@ public static class DbInitializer
 
       // EF Core 8: SqlQuery<T> + interpolated => parâmetros (seguro)
       var hash = await db.Database
-        .SqlQuery<string>($"SELECT crypt({plain}, gen_salt('bf')) AS ok")
+        .SqlQuery<string>($"SELECT crypt({plain}, gen_salt('bf')) AS \"Value\" ")
         .FirstAsync(); // mapeia a única coluna para string, indep. do nome
 
       db.Usuarios.Add(new Usuario
