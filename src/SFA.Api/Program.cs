@@ -126,7 +126,7 @@ builder.Services.AddValidatorsFromAssembly(
 var app = builder.Build();
 
 // Migrar banco automaticamente em dev (opcional)
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsStaging() || app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<SfaDbContext>();
