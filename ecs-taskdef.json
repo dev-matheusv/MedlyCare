@@ -20,9 +20,6 @@
         { "name": "Jwt__Issuer",   "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:Jwt__Issuer::" },
         { "name": "Jwt__Audience", "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:Jwt__Audience::" },
 
-        { "name": "DB_HOST",     "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:host::" },
-        { "name": "DB_PORT",     "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:port::" },
-        { "name": "DB_NAME",     "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:dbname::" },
         { "name": "DB_USER",     "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:rds!db-87483226-788d-4516-b1ec-48a2503e531a-nMnMsF:username::" },
         { "name": "DB_PASSWORD", "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:rds!db-87483226-788d-4516-b1ec-48a2503e531a-nMnMsF:password::" }
       ],
