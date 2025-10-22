@@ -9,6 +9,7 @@ using SFA.Api.Endpoints;
 using SFA.Application.Auth;
 using SFA.Infrastructure;
 using FluentValidation;
+using Npgsql;
 using SFA.Api.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,11 +19,54 @@ builder.Host.UseSerilog((ctx, lc) => lc
     .ReadFrom.Configuration(ctx.Configuration)
     .WriteTo.Console());
 
-// DbContext
+string BuildConnectionString(IConfiguration cfg)
+{
+  var host = cfg["DB_HOST"];
+  var name = cfg["DB_NAME"];
+  var user = cfg["DB_USER"];
+  var pass = cfg["DB_PASSWORD"];
+  var portStr = cfg["DB_PORT"];
+
+  var haveEnv =
+    !string.IsNullOrWhiteSpace(host) &&
+    !string.IsNullOrWhiteSpace(name) &&
+    !string.IsNullOrWhiteSpace(user) &&
+    !string.IsNullOrWhiteSpace(pass);
+
+  if (!haveEnv)
+  {
+    // Fallback: appsettings/Secrets locais
+    var cs = cfg.GetConnectionString("Default");
+    Log.Information("DB: usando ConnectionStrings:Default (fallback).");
+    return cs!;
+  }
+
+  _ = int.TryParse(portStr, out var port);
+  if (port <= 0) port = 5432;
+
+  var csb = new NpgsqlConnectionStringBuilder
+  {
+    Host = host,
+    Database = name,
+    Username = user,
+    Password = pass,
+    Port = port,
+    // Mesmo comportamento que você já utilizava:
+    SslMode = SslMode.Require
+  };
+
+  Log.Information("DB: usando variáveis de ambiente. Host={Host} Port={Port} Database={Db} User={User}",
+    host, port, name, user);
+
+  return csb.ToString();
+}
+
+var connString = BuildConnectionString(builder.Configuration);
+
 builder.Services.AddDbContext<SfaDbContext>(o =>
 {
-    o.UseNpgsql(builder.Configuration.GetConnectionString("Default"));
-    o.UseSnakeCaseNamingConvention();
+  o.UseNpgsql(connString);
+  o.UseSnakeCaseNamingConvention();
 });
 
 // Config do cors pro front
