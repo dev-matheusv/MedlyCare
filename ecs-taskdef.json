@@ -9,7 +9,7 @@
   "containerDefinitions": [
     {
       "name": "sfa-api",
-      "image": "395359594148.dkr.ecr.sa-east-1.amazonaws.com/sfa-api:CHANGE_ME",
+      "image": "395359594148.dkr.ecr.sa-east-1.amazonaws.com/sfa-api:d8abd87f2c0154c6dc3ccc6aa95d95387bf85099",
       "portMappings": [{ "containerPort": 8080, "protocol": "tcp" }],
       "essential": true,
       "environment": [

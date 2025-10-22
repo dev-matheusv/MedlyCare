@@ -21,45 +21,30 @@ builder.Host.UseSerilog((ctx, lc) => lc
 
 string BuildConnectionString(IConfiguration cfg)
 {
+  var baseCs = cfg.GetConnectionString("Default") ?? "";
+  var csb = new NpgsqlConnectionStringBuilder(baseCs);
+
   var host = cfg["DB_HOST"];
   var name = cfg["DB_NAME"];
   var user = cfg["DB_USER"];
   var pass = cfg["DB_PASSWORD"];
   var portStr = cfg["DB_PORT"];
 
-  var haveEnv =
-    !string.IsNullOrWhiteSpace(host) &&
-    !string.IsNullOrWhiteSpace(name) &&
-    !string.IsNullOrWhiteSpace(user) &&
-    !string.IsNullOrWhiteSpace(pass);
+  if (!string.IsNullOrWhiteSpace(host)) csb.Host = host;
+  if (!string.IsNullOrWhiteSpace(name)) csb.Database = name;
+  if (!string.IsNullOrWhiteSpace(user)) csb.Username = user;
+  if (!string.IsNullOrWhiteSpace(pass)) csb.Password = pass;
+  if (int.TryParse(portStr, out var port) && port > 0) csb.Port = port;
 
-  if (!haveEnv)
-  {
-    // Fallback: appsettings/Secrets locais
-    var cs = cfg.GetConnectionString("Default");
-    Log.Information("DB: usando ConnectionStrings:Default (fallback).");
-    return cs!;
-  }
+  // RDS geralmente exige SSL
+  csb.SslMode = SslMode.Require;
 
-  _ = int.TryParse(portStr, out var port);
-  if (port <= 0) port = 5432;
-
-  var csb = new NpgsqlConnectionStringBuilder
-  {
-    Host = host,
-    Database = name,
-    Username = user,
-    Password = pass,
-    Port = port,
-    // Mesmo comportamento que você já utilizava:
-    SslMode = SslMode.Require
-  };
-
-  Log.Information("DB: usando variáveis de ambiente. Host={Host} Port={Port} Database={Db} User={User}",
-    host, port, name, user);
+  Log.Information("DB: Host={Host} Port={Port} Db={Db} User={User} (merge appsettings + env)",
+    csb.Host, csb.Port, csb.Database, csb.Username);
 
   return csb.ToString();
 }
+
 
 var connString = BuildConnectionString(builder.Configuration);
 

@@ -1,0 +1,9 @@
+{
+  "ConnectionStrings": {
+    "Default": "Host=databasesfa.c1qamey8exqq.sa-east-1.rds.amazonaws.com;Port=5432;Database=sfa;Username=;Password="
+  },
+  "Serilog": {
+    "MinimumLevel": "Information",
+    "WriteTo": [{ "Name": "Console" }]
+  }
+}
