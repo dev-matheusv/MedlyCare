@@ -37,7 +37,10 @@ string BuildConnectionString(IConfiguration cfg)
   if (int.TryParse(portStr, out var port) && port > 0) csb.Port = port;
 
   // RDS geralmente exige SSL
-  csb.SslMode = SslMode.Require;
+  if(!builder.Environment.IsDevelopment()){
+    csb.SslMode = SslMode.Require;
+  }
+  
 
   Log.Information("DB: Host={Host} Port={Port} Db={Db} User={User} (merge appsettings + env)",
     csb.Host, csb.Port, csb.Database, csb.Username);
