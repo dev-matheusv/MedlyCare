@@ -80,8 +80,25 @@ public static class AgendamentoEndpoints
             };
 
             var total = await q.CountAsync();
-            var items = await q.Skip((page - 1) * pageSize).Take(pageSize)
-                .Select(a => new AgendamentoListItemDto(a.Id, a.PacienteId, a.ProfissionalId, a.InicioUtc, a.FimUtc, a.Status, a.Observacoes))
+            var projected = q
+                .Join(db.Pacientes.AsNoTracking(),
+                      a => a.PacienteId, p => p.Id,
+                      (a, p) => new { a, PacienteNome = p.Nome })
+                .Join(db.Usuarios.AsNoTracking(),
+                      ap => ap.a.ProfissionalId, u2 => u2.Id,
+                      (ap, prof) => new { ap.a, ap.PacienteNome, ProfNome = prof.Nome });
+
+            var items = await projected
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(x => new AgendamentoListItemDto(
+                    x.a.Id,
+                    new PessoaDto(x.a.PacienteId, x.PacienteNome),
+                    new PessoaDto(x.a.ProfissionalId, x.ProfNome),
+                    x.a.InicioUtc,
+                    x.a.FimUtc,
+                    x.a.Status,
+                    x.a.Observacoes))
                 .ToListAsync();
 
             return Results.Ok(new { total, page, pageSize, items });
@@ -94,7 +111,19 @@ public static class AgendamentoEndpoints
 
             var a = await db.Agendamentos.AsNoTracking()
                 .Where(x => x.Id == id && x.CodEmpresa == codEmp)
-                .Select(x => new AgendamentoListItemDto(x.Id, x.PacienteId, x.ProfissionalId, x.InicioUtc, x.FimUtc, x.Status, x.Observacoes))
+                .Join(db.Pacientes.AsNoTracking(),
+                      x => x.PacienteId, p => p.Id,
+                      (x, p) => new { x, PacienteNome = p.Nome })
+                .Join(db.Usuarios.AsNoTracking(),
+                      xp => xp.x.ProfissionalId, u2 => u2.Id,
+                      (xp, prof) => new AgendamentoListItemDto(
+                          xp.x.Id,
+                          new PessoaDto(xp.x.PacienteId, xp.PacienteNome),
+                          new PessoaDto(xp.x.ProfissionalId, prof.Nome),
+                          xp.x.InicioUtc,
+                          xp.x.FimUtc,
+                          xp.x.Status,
+                          xp.x.Observacoes))
                 .FirstOrDefaultAsync();
 
             if (a is null) return Results.NotFound();
@@ -103,7 +132,7 @@ public static class AgendamentoEndpoints
             if (IsProfissionalOnly(u))
             {
                 var uid = GetUserId(u) ?? 0;
-                if (a.ProfissionalId != uid) return Results.Forbid();
+                if (a.Profissional.Id != uid) return Results.Forbid();
             }
 
             return Results.Ok(a);
