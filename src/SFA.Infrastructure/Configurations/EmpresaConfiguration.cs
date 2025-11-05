@@ -10,6 +10,11 @@ public class EmpresaConfiguration : IEntityTypeConfiguration<Empresa>
     {
         builder.ToTable("empresa");
         builder.HasKey(x => x.Id);
+        builder.Property(a => a.Id)
+          .HasColumnName("id")
+          .HasColumnType("uuid")
+          .HasDefaultValueSql("gen_random_uuid()");
+        builder.HasKey(x => x.CodEmpresa);
         builder.Property(x => x.Nome).IsRequired().HasMaxLength(200);
         builder.Property(x => x.CriadoEm)
           .HasDefaultValueSql("now()");

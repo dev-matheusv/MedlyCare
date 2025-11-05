@@ -11,23 +11,33 @@ public class AgendamentoConfiguration : IEntityTypeConfiguration<Agendamento>
     builder.ToTable("agendamento");
 
     builder.HasKey(a => a.Id);
+    builder.Property(a => a.Id)
+           .HasColumnName("id")
+           .HasColumnType("uuid")
+           .HasDefaultValueSql("gen_random_uuid()");
 
-    builder.Property(a => a.CodEmpresa).IsRequired();
+    builder.Property(a => a.CodEmpresa).HasColumnName("cod_empresa").IsRequired();
 
-    builder.Property(a => a.InicioUtc).HasColumnType("timestamptz").IsRequired();
-    builder.Property(a => a.FimUtc).HasColumnType("timestamptz").IsRequired();
+    builder.Property(a => a.PacienteId).HasColumnName("paciente_id").HasColumnType("uuid").IsRequired();
+    builder.Property(a => a.ProfissionalId).HasColumnName("profissional_id").HasColumnType("uuid").IsRequired();
 
-    builder.Property(a => a.Status)
-      .HasMaxLength(20)
-      .HasDefaultValue("agendado")
-      .IsRequired();
+    builder.Property(a => a.InicioUtc).HasColumnName("inicio_utc").HasColumnType("timestamptz").IsRequired();
+    builder.Property(a => a.FimUtc).HasColumnName("fim_utc").HasColumnType("timestamptz").IsRequired();
 
-    builder.Property(a => a.Observacoes).HasColumnType("text");
+    builder.Property(a => a.Status).HasColumnName("status").HasMaxLength(20).HasDefaultValue("agendado").IsRequired();
+    builder.Property(a => a.Observacoes).HasColumnName("observacoes").HasColumnType("text");
 
-    builder.Property(a => a.CriadoEm).HasDefaultValueSql("now() at time zone 'utc'");
-    builder.Property(a => a.AlteradoEm);
+    builder.Property(a => a.CriadoPorUsuarioId).HasColumnName("criado_por_usuario_id").HasColumnType("uuid").IsRequired();
+    builder.Property(a => a.CriadoEm).HasColumnName("criado_em").HasDefaultValueSql("now() at time zone 'utc'");
+    builder.Property(a => a.AlteradoPorUsuarioId).HasColumnName("alterado_por_usuario_id").HasColumnType("uuid");
+    builder.Property(a => a.AlteradoEm).HasColumnName("alterado_em");
 
-    // Relacionamentos (FK por Id; escopo por empresa será validado nos endpoints)
+    // Soft delete
+    builder.Property(a => a.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false);
+    builder.Property(a => a.DeletedAt).HasColumnName("deleted_at");
+    builder.Property(a => a.DeletedBy).HasColumnName("deleted_by").HasColumnType("uuid");
+    builder.Property(a => a.DeletedReason).HasColumnName("deleted_reason").HasColumnType("text");
+
     builder.HasOne(a => a.Paciente)
       .WithMany()
       .HasForeignKey(a => a.PacienteId)
@@ -38,7 +48,6 @@ public class AgendamentoConfiguration : IEntityTypeConfiguration<Agendamento>
       .HasForeignKey(a => a.ProfissionalId)
       .OnDelete(DeleteBehavior.Restrict);
 
-    // Índices para consultas rápidas
     builder.HasIndex(a => new { a.CodEmpresa, a.ProfissionalId, a.InicioUtc });
     builder.HasIndex(a => new { a.CodEmpresa, a.PacienteId, a.InicioUtc });
   }

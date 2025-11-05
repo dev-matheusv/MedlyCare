@@ -2,7 +2,6 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using SFA.Application.Empresas;
 using SFA.Infrastructure;
-using Microsoft.AspNetCore.Authorization;
 
 namespace SFA.Api.Endpoints;
 
@@ -34,17 +33,17 @@ public static class EmpresaEndpoints
 
             var total = await q.CountAsync();
             var items = await q.Skip((page - 1) * pageSize).Take(pageSize)
-                .Select(e => new EmpresaListItemDto(e.Id, e.Nome, e.Ativa, e.CriadoEm))
+                .Select(e => new EmpresaListItemDto(e.Id, e.CodEmpresa, e.Nome, e.Ativa, e.CriadoEm))
                 .ToListAsync();
 
             return Results.Ok(new { total, page, pageSize, items });
         });
 
-        g.MapGet("/{id:int}", async (int id, SfaDbContext db) =>
+        g.MapGet("/{id:guid}", async (Guid id, SfaDbContext db) =>
         {
             var e = await db.Empresas.AsNoTracking()
                 .Where(x => x.Id == id)
-                .Select(x => new EmpresaListItemDto(x.Id, x.Nome, x.Ativa, x.CriadoEm))
+                .Select(x => new EmpresaListItemDto(x.Id, x.CodEmpresa, x.Nome, x.Ativa, x.CriadoEm))
                 .FirstOrDefaultAsync();
             return e is null ? Results.NotFound() : Results.Ok(e);
         });
@@ -60,7 +59,7 @@ public static class EmpresaEndpoints
             return Results.Created($"/api/v1/empresas/{entity.Id}", new { entity.Id });
         });
 
-        g.MapPut("/{id:int}", async (int id, EmpresaUpdateDto dto, IValidator<EmpresaUpdateDto> v, SfaDbContext db) =>
+        g.MapPut("/{id:guid}", async (Guid id, EmpresaUpdateDto dto, IValidator<EmpresaUpdateDto> v, SfaDbContext db) =>
         {
             var val = await v.ValidateAsync(dto);
             if (!val.IsValid) return Results.ValidationProblem(val.ToDictionary());
@@ -74,7 +73,7 @@ public static class EmpresaEndpoints
             return Results.NoContent();
         });
 
-        g.MapDelete("/{id:int}", async (int id, SfaDbContext db) =>
+        g.MapDelete("/{id:guid}", async (Guid id, SfaDbContext db) =>
         {
             var e = await db.Empresas.FirstOrDefaultAsync(x => x.Id == id);
             if (e is null) return Results.NotFound();

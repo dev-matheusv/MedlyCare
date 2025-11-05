@@ -1,7 +1,7 @@
 namespace SFA.Application.Pacientes;
 
 public record PacienteListItemDto(
-  int Id, string Nome, string Documento, bool Ativo, DateTime CriadoEm,
+  Guid Id, string Nome, string Documento, bool Ativo, DateTime CriadoEm,
   string? Telefone, string? Email, DateOnly? DataNascimento
 );
 

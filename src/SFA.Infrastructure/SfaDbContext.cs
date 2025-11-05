@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using SFA.Domain.Entities;
 
@@ -15,7 +16,20 @@ public class SfaDbContext : DbContext
     public DbSet<Agendamento> Agendamentos => Set<Agendamento>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.HasPostgresExtension("pgcrypto");
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(SfaDbContext).Assembly);
+      modelBuilder.HasPostgresExtension("pgcrypto");
+      modelBuilder.ApplyConfigurationsFromAssembly(typeof(SfaDbContext).Assembly);
+
+      // filtro global IsDeleted
+      foreach (var et in modelBuilder.Model.GetEntityTypes())
+      {
+        var prop = et.FindProperty("IsDeleted");
+        if (prop?.ClrType == typeof(bool))
+        {
+          var p = Expression.Parameter(et.ClrType, "e");
+          var body = Expression.Equal(Expression.Property(p, "IsDeleted"), Expression.Constant(false));
+          modelBuilder.Entity(et.ClrType).HasQueryFilter(Expression.Lambda(body, p));
+        }
+      }
     }
+
 }

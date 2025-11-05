@@ -10,6 +10,10 @@ public class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
     {
         builder.ToTable("usuario");
         builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id)
+          .HasColumnName("id")
+          .HasColumnType("uuid")
+          .HasDefaultValueSql("gen_random_uuid()");
 
         builder.Property(x => x.CodEmpresa).IsRequired();
         builder.Property(x => x.Login).IsRequired().HasMaxLength(120);

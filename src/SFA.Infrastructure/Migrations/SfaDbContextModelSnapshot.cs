@@ -25,19 +25,18 @@ namespace SFA.Infrastructure.Migrations
 
             modelBuilder.Entity("SFA.Domain.Entities.Agendamento", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<DateTime?>("AlteradoEm")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("alterado_em");
 
-                    b.Property<int?>("AlteradoPorUsuarioId")
-                        .HasColumnType("integer")
+                    b.Property<Guid?>("AlteradoPorUsuarioId")
+                        .HasColumnType("uuid")
                         .HasColumnName("alterado_por_usuario_id");
 
                     b.Property<int>("CodEmpresa")
@@ -50,9 +49,21 @@ namespace SFA.Infrastructure.Migrations
                         .HasColumnName("criado_em")
                         .HasDefaultValueSql("now() at time zone 'utc'");
 
-                    b.Property<int>("CriadoPorUsuarioId")
-                        .HasColumnType("integer")
+                    b.Property<Guid>("CriadoPorUsuarioId")
+                        .HasColumnType("uuid")
                         .HasColumnName("criado_por_usuario_id");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<string>("DeletedReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deleted_reason");
 
                     b.Property<DateTimeOffset>("FimUtc")
                         .HasColumnType("timestamptz")
@@ -62,16 +73,22 @@ namespace SFA.Infrastructure.Migrations
                         .HasColumnType("timestamptz")
                         .HasColumnName("inicio_utc");
 
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
+
                     b.Property<string>("Observacoes")
                         .HasColumnType("text")
                         .HasColumnName("observacoes");
 
-                    b.Property<int>("PacienteId")
-                        .HasColumnType("integer")
+                    b.Property<Guid>("PacienteId")
+                        .HasColumnType("uuid")
                         .HasColumnName("paciente_id");
 
-                    b.Property<int>("ProfissionalId")
-                        .HasColumnType("integer")
+                    b.Property<Guid>("ProfissionalId")
+                        .HasColumnType("uuid")
                         .HasColumnName("profissional_id");
 
                     b.Property<string>("Status")
@@ -102,12 +119,12 @@ namespace SFA.Infrastructure.Migrations
 
             modelBuilder.Entity("SFA.Domain.Entities.Empresa", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("CodEmpresa")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
-                        .HasColumnName("id");
+                        .HasColumnName("cod_empresa");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("CodEmpresa"));
 
                     b.Property<bool>("Ativa")
                         .HasColumnType("boolean")
@@ -119,13 +136,18 @@ namespace SFA.Infrastructure.Migrations
                         .HasColumnName("criado_em")
                         .HasDefaultValueSql("now()");
 
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("nome");
 
-                    b.HasKey("Id")
+                    b.HasKey("CodEmpresa")
                         .HasName("pk_empresa");
 
                     b.HasIndex("Nome")
@@ -136,12 +158,11 @@ namespace SFA.Infrastructure.Migrations
 
             modelBuilder.Entity("SFA.Domain.Entities.Paciente", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<bool>("Ativo")
                         .ValueGeneratedOnAdd()
@@ -163,6 +184,18 @@ namespace SFA.Infrastructure.Migrations
                         .HasColumnType("date")
                         .HasColumnName("data_nascimento");
 
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<string>("DeletedReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deleted_reason");
+
                     b.Property<string>("Documento")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -173,6 +206,10 @@ namespace SFA.Infrastructure.Migrations
                         .HasMaxLength(180)
                         .HasColumnType("character varying(180)")
                         .HasColumnName("email");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
 
                     b.Property<string>("Nome")
                         .IsRequired()
@@ -199,12 +236,11 @@ namespace SFA.Infrastructure.Migrations
 
             modelBuilder.Entity("SFA.Domain.Entities.Perfil", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<bool>("Ativo")
                         .ValueGeneratedOnAdd()
@@ -240,12 +276,11 @@ namespace SFA.Infrastructure.Migrations
 
             modelBuilder.Entity("SFA.Domain.Entities.Usuario", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<bool>("Ativo")
                         .HasColumnType("boolean")
@@ -290,19 +325,26 @@ namespace SFA.Infrastructure.Migrations
 
             modelBuilder.Entity("SFA.Domain.Entities.UsuarioPerfil", b =>
                 {
-                    b.Property<int>("UsuarioId")
-                        .HasColumnType("integer")
-                        .HasColumnName("usuario_id");
+                    b.Property<Guid>("UsuarioId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
-                    b.Property<int>("PerfilId")
-                        .HasColumnType("integer")
-                        .HasColumnName("perfil_id");
+                    b.Property<Guid>("PerfilId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("perfil_id")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.HasKey("UsuarioId", "PerfilId")
                         .HasName("pk_usuario_perfil");
 
                     b.HasIndex("PerfilId")
                         .HasDatabaseName("ix_usuario_perfil_perfil_id");
+
+                    b.HasIndex("UsuarioId")
+                        .HasDatabaseName("ix_usuario_perfil_usuario_id");
 
                     b.ToTable("usuario_perfil", (string)null);
                 });

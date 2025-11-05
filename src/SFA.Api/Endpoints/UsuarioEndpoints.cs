@@ -58,7 +58,7 @@ public static class UsuarioEndpoints
             return Results.Ok(new { total, page, pageSize, items });
         });
 
-        g.MapGet("/{id:int}", async (ClaimsPrincipal u, int id, SfaDbContext db) =>
+        g.MapGet("/{id:guid}", async (ClaimsPrincipal u, Guid id, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
             var x = await db.Usuarios.AsNoTracking()
@@ -103,7 +103,7 @@ public static class UsuarioEndpoints
             return Results.Created($"/api/v1/usuarios/{entity.Id}", new { entity.Id });
         });
 
-        g.MapPut("/{id:int}", async (ClaimsPrincipal u, int id, UsuarioUpdateDto dto, IValidator<UsuarioUpdateDto> v, SfaDbContext db) =>
+        g.MapPut("/{id:guid}", async (ClaimsPrincipal u, Guid id, UsuarioUpdateDto dto, IValidator<UsuarioUpdateDto> v, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
 
@@ -132,7 +132,7 @@ public static class UsuarioEndpoints
         });
 
         // Ativar / Inativar (atalhos)
-        g.MapPost("/{id:int}/ativar", async (ClaimsPrincipal u, int id, SfaDbContext db) =>
+        g.MapPost("/{id:guid}/ativar", async (ClaimsPrincipal u, Guid id, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
             var entity = await db.Usuarios.FirstOrDefaultAsync(x => x.Id == id && x.CodEmpresa == codEmp);
@@ -142,7 +142,7 @@ public static class UsuarioEndpoints
             return Results.NoContent();
         });
 
-        g.MapPost("/{id:int}/inativar", async (ClaimsPrincipal u, int id, SfaDbContext db) =>
+        g.MapPost("/{id:guid}/inativar", async (ClaimsPrincipal u, Guid id, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
             var entity = await db.Usuarios.FirstOrDefaultAsync(x => x.Id == id && x.CodEmpresa == codEmp);
@@ -152,7 +152,7 @@ public static class UsuarioEndpoints
             return Results.NoContent();
         });
 
-        g.MapDelete("/{id:int}", async (ClaimsPrincipal u, int id, SfaDbContext db) =>
+        g.MapDelete("/{id:guid}", async (ClaimsPrincipal u, Guid id, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
             var entity = await db.Usuarios.FirstOrDefaultAsync(x => x.Id == id && x.CodEmpresa == codEmp);

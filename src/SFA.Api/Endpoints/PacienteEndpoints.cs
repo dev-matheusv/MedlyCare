@@ -20,6 +20,12 @@ public static class PacienteEndpoints
                 throw new InvalidOperationException("cod_empresa ausente no token.");
             return codEmp;
         }
+        
+        static Guid? GetUserId(ClaimsPrincipal user)
+        {
+          var s = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.FindFirst("sub")?.Value;
+          return Guid.TryParse(s, out var id) ? id : null;   // antes: int
+        }
 
         // GET /pacientes?search=&ativo=&page=1&pageSize=20&order=nome|-nome|criadoem|-criadoem
         g.MapGet("/", async (ClaimsPrincipal u, string? search, bool? ativo,
@@ -58,7 +64,7 @@ public static class PacienteEndpoints
             return Results.Ok(new { total, page, pageSize, items });
         });
 
-        g.MapGet("/{id:int}", async (ClaimsPrincipal u, int id, SfaDbContext db) =>
+        g.MapGet("/{id:guid}", async (ClaimsPrincipal u, Guid id, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
 
@@ -93,7 +99,7 @@ public static class PacienteEndpoints
             return Results.Created($"/api/v1/pacientes/{entity.Id}", new { entity.Id });
         });
 
-        g.MapPut("/{id:int}", async (ClaimsPrincipal u, int id, PacienteUpdateDto dto, IValidator<PacienteUpdateDto> v, SfaDbContext db) =>
+        g.MapPut("/{id:guid}", async (ClaimsPrincipal u, Guid id, PacienteUpdateDto dto, IValidator<PacienteUpdateDto> v, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
 
@@ -114,15 +120,23 @@ public static class PacienteEndpoints
             return Results.NoContent();
         });
 
-        g.MapDelete("/{id:int}", async (ClaimsPrincipal u, int id, SfaDbContext db) =>
+        g.MapDelete("/{id:guid}", async (ClaimsPrincipal u, Guid id, string? motivo, SfaDbContext db) =>
         {
-            var codEmp = GetCodEmpresa(u);
-            var entity = await db.Pacientes.FirstOrDefaultAsync(x => x.Id == id && x.CodEmpresa == codEmp);
-            if (entity is null) return Results.NotFound();
+          var codEmp = GetCodEmpresa(u);
+          if (string.IsNullOrWhiteSpace(motivo))
+            return Results.BadRequest(new { message = "motivo_obrigatorio" });
 
-            db.Pacientes.Remove(entity);
-            await db.SaveChangesAsync();
-            return Results.NoContent();
+          var entity = await db.Pacientes.FirstOrDefaultAsync(x => x.Id == id && x.CodEmpresa == codEmp);
+          if (entity is null) return Results.NotFound();
+
+          entity.IsDeleted = true;
+          entity.DeletedAt = DateTimeOffset.UtcNow;
+          var uid = GetUserId(u);
+          if (uid.HasValue) entity.DeletedBy = uid.Value;
+          entity.DeletedReason = motivo;
+
+          await db.SaveChangesAsync();
+          return Results.NoContent();
         });
     }
 }

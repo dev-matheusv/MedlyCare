@@ -21,18 +21,17 @@ public static class AgendamentoEndpoints
             return codEmp;
         }
 
-        static int? GetUserId(ClaimsPrincipal user)
+        static Guid? GetUserId(ClaimsPrincipal user)
         {
-            var s = user.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                     ?? user.FindFirst("sub")?.Value;
-            return int.TryParse(s, out var id) ? id : null;
+          var s = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.FindFirst("sub")?.Value;
+          return Guid.TryParse(s, out var id) ? id : null;   // antes: int
         }
 
         static bool IsProfissionalOnly(ClaimsPrincipal u)
             => u.Claims.Where(c => c.Type == ClaimTypes.Role).All(c => c.Value is "Profissional");
 
         // Função para checar overlap (conflito de horário)
-        static Task<bool> ExisteConflitoAsync(SfaDbContext db, int codEmp, int profissionalId, DateTimeOffset inicio, DateTimeOffset fim, int? ignorarId = null)
+        static Task<bool> ExisteConflitoAsync(SfaDbContext db, int codEmp, Guid profissionalId, DateTimeOffset inicio, DateTimeOffset fim, Guid? ignorarId = null)
         {
             return db.Agendamentos.AsNoTracking().AnyAsync(a =>
                 a.CodEmpresa == codEmp
@@ -45,7 +44,7 @@ public static class AgendamentoEndpoints
         }
 
         // GET /agendamentos?profissionalId=&pacienteId=&de=&ate=&status=&page=&pageSize=&order=
-        g.MapGet("/", async (ClaimsPrincipal u, int? profissionalId, int? pacienteId, DateTimeOffset? de,
+        g.MapGet("/", async (ClaimsPrincipal u, Guid? profissionalId, Guid? pacienteId, DateTimeOffset? de,
           DateTimeOffset? ate, string? status, SfaDbContext db, int page = 1, int pageSize = 20, string? order = null) =>
         {
             var codEmp = GetCodEmpresa(u);
@@ -57,7 +56,7 @@ public static class AgendamentoEndpoints
             // Profissional só enxerga os próprios
             if (IsProfissionalOnly(u))
             {
-                var uid = GetUserId(u) ?? 0;
+                var uid = GetUserId(u) ?? Guid.Empty;
                 q = q.Where(a => a.ProfissionalId == uid);
             }
             else
@@ -105,7 +104,7 @@ public static class AgendamentoEndpoints
         });
 
         // GET /agendamentos/{id}
-        g.MapGet("/{id:int}", async (ClaimsPrincipal u, int id, SfaDbContext db) =>
+        g.MapGet("/{id:guid}", async (ClaimsPrincipal u, Guid id, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
 
@@ -131,7 +130,7 @@ public static class AgendamentoEndpoints
             // Profissional só pode ver se for dele
             if (IsProfissionalOnly(u))
             {
-                var uid = GetUserId(u) ?? 0;
+                var uid = GetUserId(u) ?? Guid.Empty;
                 if (a.Profissional.Id != uid) return Results.Forbid();
             }
 
@@ -146,7 +145,7 @@ public static class AgendamentoEndpoints
             // Profissional só pode criar para si mesmo
             if (IsProfissionalOnly(u))
             {
-                var uid = GetUserId(u) ?? 0;
+                var uid = GetUserId(u) ?? Guid.Empty;
                 if (dto.ProfissionalId != uid) return Results.Forbid();
             }
 
@@ -164,7 +163,7 @@ public static class AgendamentoEndpoints
             if (await ExisteConflitoAsync(db, codEmp, dto.ProfissionalId, dto.InicioUtc, dto.FimUtc))
                 return Results.Conflict(new { message = "conflito_horario_profissional" });
 
-            var userId = GetUserId(u) ?? 0;
+            var userId = GetUserId(u) ?? Guid.Empty;
 
             var entity = new Domain.Entities.Agendamento
             {
@@ -186,7 +185,7 @@ public static class AgendamentoEndpoints
         });
 
         // PUT /agendamentos/{id}
-        g.MapPut("/{id:int}", async (ClaimsPrincipal u, int id, AgendamentoUpdateDto dto, IValidator<AgendamentoUpdateDto> v, SfaDbContext db) =>
+        g.MapPut("/{id:guid}", async (ClaimsPrincipal u, Guid id, AgendamentoUpdateDto dto, IValidator<AgendamentoUpdateDto> v, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
 
@@ -199,7 +198,7 @@ public static class AgendamentoEndpoints
             // Profissional só pode alterar se for dele
             if (IsProfissionalOnly(u))
             {
-                var uid = GetUserId(u) ?? 0;
+                var uid = GetUserId(u) ?? Guid.Empty;
                 if (entity.ProfissionalId != uid) return Results.Forbid();
             }
 
@@ -222,7 +221,7 @@ public static class AgendamentoEndpoints
         });
 
         // POST /agendamentos/{id}/confirmar
-        g.MapPost("/{id:int}/confirmar", async (ClaimsPrincipal u, int id, SfaDbContext db) =>
+        g.MapPost("/{id:guid}/confirmar", async (ClaimsPrincipal u, Guid id, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
 
@@ -231,7 +230,7 @@ public static class AgendamentoEndpoints
 
             if (IsProfissionalOnly(u))
             {
-                var uid = GetUserId(u) ?? 0;
+                var uid = GetUserId(u) ?? Guid.Empty;
                 if (entity.ProfissionalId != uid) return Results.Forbid();
             }
 
@@ -243,7 +242,7 @@ public static class AgendamentoEndpoints
         });
 
         // POST /agendamentos/{id}/cancelar
-        g.MapPost("/{id:int}/cancelar", async (ClaimsPrincipal u, int id, SfaDbContext db) =>
+        g.MapPost("/{id:guid}/cancelar", async (ClaimsPrincipal u, Guid id, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
 
@@ -252,7 +251,7 @@ public static class AgendamentoEndpoints
 
             if (IsProfissionalOnly(u))
             {
-                var uid = GetUserId(u) ?? 0;
+                var uid = GetUserId(u) ?? Guid.Empty;
                 if (entity.ProfissionalId != uid) return Results.Forbid();
             }
 
@@ -264,20 +263,25 @@ public static class AgendamentoEndpoints
         });
 
         // DELETE /agendamentos/{id}
-        g.MapDelete("/{id:int}", async (ClaimsPrincipal u, int id, SfaDbContext db) =>
+        g.MapDelete("/{id:guid}", async (ClaimsPrincipal u, Guid id, string? motivo, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
+            if (string.IsNullOrWhiteSpace(motivo)) return Results.BadRequest(new { message = "motivo_obrigatorio" });
 
             var entity = await db.Agendamentos.FirstOrDefaultAsync(a => a.Id == id && a.CodEmpresa == codEmp);
             if (entity is null) return Results.NotFound();
 
             if (IsProfissionalOnly(u))
             {
-                var uid = GetUserId(u) ?? 0;
+                var uid = GetUserId(u) ?? Guid.Empty;
                 if (entity.ProfissionalId != uid) return Results.Forbid();
             }
+            
+            entity.IsDeleted = true;
+            entity.DeletedAt = DateTimeOffset.UtcNow;
+            entity.DeletedBy = GetUserId(u);
+            entity.DeletedReason = motivo;
 
-            db.Agendamentos.Remove(entity);
             await db.SaveChangesAsync();
             return Results.NoContent();
         });
@@ -285,8 +289,8 @@ public static class AgendamentoEndpoints
         g.MapGet("/events", async (ClaimsPrincipal u,
                            DateTimeOffset de,
                            DateTimeOffset ate,
-                           int? profissionalId,
-                           int? pacienteId,
+                           Guid? profissionalId,
+                           Guid? pacienteId,
                            string? status,
                            SfaDbContext db) =>
         {
@@ -298,7 +302,7 @@ public static class AgendamentoEndpoints
 
             if (IsProfissionalOnly(u))
             {
-                var uid = GetUserId(u) ?? 0;
+                var uid = GetUserId(u) ?? Guid.Empty;
                 q = q.Where(a => a.ProfissionalId == uid);
             }
             else if (profissionalId.HasValue)
@@ -350,7 +354,7 @@ public static class AgendamentoEndpoints
         
         // GET /agendamentos/slots
         g.MapGet("/slots", async (ClaimsPrincipal u,
-          int? profissionalId,
+          Guid? profissionalId,
           DateOnly data,
           SfaDbContext db,
           int duracaoMin = 30,
@@ -363,13 +367,13 @@ public static class AgendamentoEndpoints
             // Se for Profissional sem profissionalId informado, usa o próprio userId
             if (IsProfissionalOnly(u))
             {
-                var uid = GetUserId(u) ?? 0;
+                var uid = GetUserId(u) ?? Guid.Empty;
                 profissionalId ??= uid;
                 if (profissionalId.Value != uid) return Results.Forbid();
             }
             else
             {
-                if (profissionalId is null || profissionalId <= 0)
+                if (profissionalId is null)
                     return Results.BadRequest(new { message = "profissional_id_obrigatorio" });
             }
 

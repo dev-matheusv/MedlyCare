@@ -52,7 +52,7 @@ public static class PerfilEndpoints
         });
 
         // GET /perfis/{id}
-        g.MapGet("/{id:int}", async (ClaimsPrincipal u, int id, SfaDbContext db) =>
+        g.MapGet("/{id:guid}", async (ClaimsPrincipal u, Guid id, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
 
@@ -88,7 +88,7 @@ public static class PerfilEndpoints
         });
 
         // PUT /perfis/{id}
-        g.MapPut("/{id:int}", async (ClaimsPrincipal u, int id, PerfilUpdateDto dto, IValidator<PerfilUpdateDto> v, SfaDbContext db) =>
+        g.MapPut("/{id:guid}", async (ClaimsPrincipal u, Guid id, PerfilUpdateDto dto, IValidator<PerfilUpdateDto> v, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
 
@@ -109,7 +109,7 @@ public static class PerfilEndpoints
         });
 
         // POST /perfis/{id}/ativar
-        g.MapPost("/{id:int}/ativar", async (ClaimsPrincipal u, int id, SfaDbContext db) =>
+        g.MapPost("/{id:guid}/ativar", async (ClaimsPrincipal u, Guid id, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
             var entity = await db.Perfis.FirstOrDefaultAsync(p => p.Id == id && p.CodEmpresa == codEmp);
@@ -120,7 +120,7 @@ public static class PerfilEndpoints
         });
 
         // POST /perfis/{id}/inativar
-        g.MapPost("/{id:int}/inativar", async (ClaimsPrincipal u, int id, SfaDbContext db) =>
+        g.MapPost("/{id:guid}/inativar", async (ClaimsPrincipal u, Guid id, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
             var entity = await db.Perfis.FirstOrDefaultAsync(p => p.Id == id && p.CodEmpresa == codEmp);
@@ -131,7 +131,7 @@ public static class PerfilEndpoints
         });
 
         // DELETE /perfis/{id}
-        g.MapDelete("/{id:int}", async (ClaimsPrincipal u, int id, SfaDbContext db) =>
+        g.MapDelete("/{id:guid}", async (ClaimsPrincipal u, Guid id, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
             var entity = await db.Perfis.FirstOrDefaultAsync(p => p.Id == id && p.CodEmpresa == codEmp);

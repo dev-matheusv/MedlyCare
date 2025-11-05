@@ -19,7 +19,7 @@ public static class UsuarioPerfilEndpoints
         }
 
         // Lista perfis do usuário
-        g.MapGet("/", async (ClaimsPrincipal u, int usuarioId, SfaDbContext db) =>
+        g.MapGet("/", async (ClaimsPrincipal u, Guid usuarioId, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
 
@@ -35,7 +35,7 @@ public static class UsuarioPerfilEndpoints
         });
 
         // Vincular perfil ao usuário
-        g.MapPost("/{perfilId:int}", async (ClaimsPrincipal u, int usuarioId, int perfilId, SfaDbContext db) =>
+        g.MapPost("/{perfilId:guid}", async (ClaimsPrincipal u, Guid usuarioId, Guid perfilId, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
 
@@ -54,7 +54,7 @@ public static class UsuarioPerfilEndpoints
         });
 
         // Desvincular perfil do usuário
-        g.MapDelete("/{perfilId:int}", async (ClaimsPrincipal u, int usuarioId, int perfilId, SfaDbContext db) =>
+        g.MapDelete("/{perfilId:guid}", async (ClaimsPrincipal u, Guid usuarioId, Guid perfilId, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
 

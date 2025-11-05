@@ -1,6 +1,6 @@
 namespace SFA.Application.Usuarios;
 
-public record UsuarioListItemDto(int Id, int CodEmpresa, string Login, string Nome, bool Ativo, DateTime CriadoEm);
+public record UsuarioListItemDto(Guid Id, int CodEmpresa, string Login, string Nome, bool Ativo, DateTime CriadoEm);
 
 public record UsuarioCreateDto(
   string Login,

@@ -1,12 +1,9 @@
 namespace SFA.Application.Agendamentos;
 
-public record PessoaDto(
-  int Id,
-  string Nome
-);
+public record PessoaDto(Guid Id, string Nome); // antes: int
 
 public record AgendamentoListItemDto(
-  int Id,
+  Guid Id, // antes: int
   PessoaDto Paciente,
   PessoaDto Profissional,
   DateTimeOffset InicioUtc,
@@ -16,8 +13,8 @@ public record AgendamentoListItemDto(
 );
 
 public record AgendamentoCreateDto(
-  int PacienteId,
-  int ProfissionalId,
+  Guid PacienteId, // antes: int
+  Guid ProfissionalId, // antes: int
   DateTimeOffset InicioUtc,
   DateTimeOffset FimUtc,
   string? Observacoes

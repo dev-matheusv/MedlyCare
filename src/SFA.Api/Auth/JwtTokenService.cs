@@ -12,7 +12,7 @@ public sealed class JwtTokenService(IOptions<JwtOptions> opt, TimeProvider? cloc
   private readonly JwtOptions _opt = opt.Value;
   private readonly TimeProvider _clock = clock ?? TimeProvider.System; // melhor p/ testabilidade
 
-  public TokenResult CreateToken(int userId, int codEmpresa, string nome, IEnumerable<string> roles)
+  public TokenResult CreateToken(Guid userId, int codEmpresa, string nome, IEnumerable<string> roles)
   {
     var now = _clock.GetUtcNow().UtcDateTime;
 

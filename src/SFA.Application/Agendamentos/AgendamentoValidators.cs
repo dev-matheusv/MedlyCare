@@ -6,8 +6,8 @@ public class AgendamentoCreateValidator : AbstractValidator<AgendamentoCreateDto
 {
   public AgendamentoCreateValidator()
   {
-    RuleFor(x => x.PacienteId).GreaterThan(0);
-    RuleFor(x => x.ProfissionalId).GreaterThan(0);
+    RuleFor(x => x.PacienteId).GreaterThan(Guid.Empty);
+    RuleFor(x => x.ProfissionalId).GreaterThan(Guid.Empty);
     RuleFor(x => x.InicioUtc).NotEmpty();
     RuleFor(x => x.FimUtc).NotEmpty()
       .Must((dto, fim) => fim > dto.InicioUtc)

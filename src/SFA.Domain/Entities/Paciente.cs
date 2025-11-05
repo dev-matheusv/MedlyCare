@@ -2,7 +2,7 @@ namespace SFA.Domain.Entities;
 
 public class Paciente
 {
-  public int Id { get; set; }
+  public Guid Id { get; set; }
   public int CodEmpresa { get; set; }
 
   public string Nome { get; set; } = null!;
@@ -13,4 +13,9 @@ public class Paciente
 
   public bool Ativo { get; set; } = true;
   public DateTime CriadoEm { get; set; }
+  // Soft delete
+  public bool IsDeleted { get; set; }
+  public DateTimeOffset? DeletedAt { get; set; }
+  public Guid? DeletedBy { get; set; }              // antes: int?
+  public string? DeletedReason { get; set; }
 }

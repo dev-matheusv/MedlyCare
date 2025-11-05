@@ -6,15 +6,19 @@ namespace SFA.Infrastructure.Configurations;
 
 public class PerfilConfiguration : IEntityTypeConfiguration<Perfil>
 {
-  public void Configure(EntityTypeBuilder<Perfil> b)
+  public void Configure(EntityTypeBuilder<Perfil> builder)
   {
-    b.ToTable("perfil");
-    b.HasKey(x => x.Id);
-    b.Property(x => x.Nome).IsRequired().HasMaxLength(80);
-    b.Property(x => x.CriadoEm).HasDefaultValueSql("now()");
-    b.Property(x => x.Ativo).HasDefaultValue(true);
+    builder.ToTable("perfil");
+    builder.HasKey(x => x.Id);
+    builder.Property(x => x.Id)
+      .HasColumnName("id")
+      .HasColumnType("uuid")
+      .HasDefaultValueSql("gen_random_uuid()");
+    builder.Property(x => x.Nome).IsRequired().HasMaxLength(80);
+    builder.Property(x => x.CriadoEm).HasDefaultValueSql("now()");
+    builder.Property(x => x.Ativo).HasDefaultValue(true);
 
     // Se perfil for por empresa:
-    b.HasIndex(x => new { x.CodEmpresa, x.Nome }).IsUnique();
+    builder.HasIndex(x => new { x.CodEmpresa, x.Nome }).IsUnique();
   }
 }

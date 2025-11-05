@@ -2,7 +2,7 @@ namespace SFA.Domain.Entities;
 
 public class Usuario
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public int CodEmpresa { get; set; }
     public string Login { get; set; } = null!;
     public string Nome { get; set; } = null!;

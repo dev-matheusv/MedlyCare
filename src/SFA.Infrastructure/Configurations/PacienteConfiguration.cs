@@ -6,23 +6,27 @@ namespace SFA.Infrastructure.Configurations;
 
 public class PacienteConfiguration : IEntityTypeConfiguration<Paciente>
 {
-  public void Configure(EntityTypeBuilder<Paciente> b)
+  public void Configure(EntityTypeBuilder<Paciente> builder)
   {
-    b.ToTable("paciente");
-    b.HasKey(x => x.Id);
+    builder.ToTable("paciente");
+    builder.HasKey(x => x.Id);
+    builder.Property(x => x.Id)
+      .HasColumnName("id")
+      .HasColumnType("uuid")
+      .HasDefaultValueSql("gen_random_uuid()");
 
-    b.Property(x => x.CodEmpresa).IsRequired();
-    b.Property(x => x.Nome).IsRequired().HasMaxLength(120);
-    b.Property(x => x.Documento).IsRequired().HasMaxLength(20);
-    b.Property(x => x.DataNascimento).HasColumnType("date"); 
-    b.Property(x => x.Telefone).HasMaxLength(20);
-    b.Property(x => x.Email).HasMaxLength(180);
-    b.Property(x => x.CriadoEm).HasDefaultValueSql("now()");
-    b.Property(x => x.Ativo).HasDefaultValue(true);
+    builder.Property(x => x.CodEmpresa).IsRequired();
+    builder.Property(x => x.Nome).IsRequired().HasMaxLength(120);
+    builder.Property(x => x.Documento).IsRequired().HasMaxLength(20);
+    builder.Property(x => x.DataNascimento).HasColumnType("date"); 
+    builder.Property(x => x.Telefone).HasMaxLength(20);
+    builder.Property(x => x.Email).HasMaxLength(180);
+    builder.Property(x => x.CriadoEm).HasDefaultValueSql("now()");
+    builder.Property(x => x.Ativo).HasDefaultValue(true);
 
     // Índices úteis para pesquisa
-    b.HasIndex(x => new { x.CodEmpresa, x.Nome });
-    b.HasIndex(x => new { x.CodEmpresa, x.Documento });
+    builder.HasIndex(x => new { x.CodEmpresa, x.Nome });
+    builder.HasIndex(x => new { x.CodEmpresa, x.Documento });
     // Se quiser documento único por empresa, troque por Unique:
     // b.HasIndex(x => new { x.CodEmpresa, x.Documento }).IsUnique();
   }
