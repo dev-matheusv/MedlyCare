@@ -1,9 +1,14 @@
 namespace SFA.Application.Agendamentos;
 
+public record PessoaDto(
+  int Id,
+  string Nome
+);
+
 public record AgendamentoListItemDto(
   int Id,
-  int PacienteId,
-  int ProfissionalId,
+  PessoaDto Paciente,
+  PessoaDto Profissional,
   DateTimeOffset InicioUtc,
   DateTimeOffset FimUtc,
   string Status,
