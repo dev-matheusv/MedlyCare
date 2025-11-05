@@ -99,20 +99,15 @@ namespace SFA.Infrastructure.Migrations
                         .HasDefaultValue("agendado")
                         .HasColumnName("status");
 
-                    b.HasKey("Id")
-                        .HasName("pk_agendamento");
+                    b.HasKey("Id");
 
-                    b.HasIndex("PacienteId")
-                        .HasDatabaseName("ix_agendamento_paciente_id");
+                    b.HasIndex("PacienteId");
 
-                    b.HasIndex("ProfissionalId")
-                        .HasDatabaseName("ix_agendamento_profissional_id");
+                    b.HasIndex("ProfissionalId");
 
-                    b.HasIndex("CodEmpresa", "PacienteId", "InicioUtc")
-                        .HasDatabaseName("ix_agendamento_cod_empresa_paciente_id_inicio_utc");
+                    b.HasIndex("CodEmpresa", "PacienteId", "InicioUtc");
 
-                    b.HasIndex("CodEmpresa", "ProfissionalId", "InicioUtc")
-                        .HasDatabaseName("ix_agendamento_cod_empresa_profissional_id_inicio_utc");
+                    b.HasIndex("CodEmpresa", "ProfissionalId", "InicioUtc");
 
                     b.ToTable("agendamento", (string)null);
                 });
@@ -121,19 +116,16 @@ namespace SFA.Infrastructure.Migrations
                 {
                     b.Property<int>("CodEmpresa")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("cod_empresa");
+                        .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("CodEmpresa"));
 
                     b.Property<bool>("Ativa")
-                        .HasColumnType("boolean")
-                        .HasColumnName("ativa");
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("CriadoEm")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("criado_em")
                         .HasDefaultValueSql("now()");
 
                     b.Property<Guid>("Id")
@@ -144,14 +136,11 @@ namespace SFA.Infrastructure.Migrations
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("nome");
+                        .HasColumnType("character varying(200)");
 
-                    b.HasKey("CodEmpresa")
-                        .HasName("pk_empresa");
+                    b.HasKey("CodEmpresa");
 
-                    b.HasIndex("Nome")
-                        .HasDatabaseName("ix_empresa_nome");
+                    b.HasIndex("Nome");
 
                     b.ToTable("empresa", (string)null);
                 });
@@ -167,69 +156,54 @@ namespace SFA.Infrastructure.Migrations
                     b.Property<bool>("Ativo")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("ativo");
+                        .HasDefaultValue(true);
 
                     b.Property<int>("CodEmpresa")
-                        .HasColumnType("integer")
-                        .HasColumnName("cod_empresa");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CriadoEm")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("criado_em")
                         .HasDefaultValueSql("now()");
 
                     b.Property<DateOnly?>("DataNascimento")
-                        .HasColumnType("date")
-                        .HasColumnName("data_nascimento");
+                        .HasColumnType("date");
 
                     b.Property<DateTimeOffset?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("deleted_by");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("DeletedReason")
-                        .HasColumnType("text")
-                        .HasColumnName("deleted_reason");
+                        .HasColumnType("text");
 
                     b.Property<string>("Documento")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("documento");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("Email")
                         .HasMaxLength(180)
-                        .HasColumnType("character varying(180)")
-                        .HasColumnName("email");
+                        .HasColumnType("character varying(180)");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_deleted");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(120)
-                        .HasColumnType("character varying(120)")
-                        .HasColumnName("nome");
+                        .HasColumnType("character varying(120)");
 
                     b.Property<string>("Telefone")
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("telefone");
+                        .HasColumnType("character varying(20)");
 
-                    b.HasKey("Id")
-                        .HasName("pk_paciente");
+                    b.HasKey("Id");
 
-                    b.HasIndex("CodEmpresa", "Documento")
-                        .HasDatabaseName("ix_paciente_cod_empresa_documento");
+                    b.HasIndex("CodEmpresa", "Documento");
 
-                    b.HasIndex("CodEmpresa", "Nome")
-                        .HasDatabaseName("ix_paciente_cod_empresa_nome");
+                    b.HasIndex("CodEmpresa", "Nome");
 
                     b.ToTable("paciente", (string)null);
                 });
@@ -245,31 +219,25 @@ namespace SFA.Infrastructure.Migrations
                     b.Property<bool>("Ativo")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("ativo");
+                        .HasDefaultValue(true);
 
                     b.Property<int>("CodEmpresa")
-                        .HasColumnType("integer")
-                        .HasColumnName("cod_empresa");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CriadoEm")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("criado_em")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(80)
-                        .HasColumnType("character varying(80)")
-                        .HasColumnName("nome");
+                        .HasColumnType("character varying(80)");
 
-                    b.HasKey("Id")
-                        .HasName("pk_perfil");
+                    b.HasKey("Id");
 
                     b.HasIndex("CodEmpresa", "Nome")
-                        .IsUnique()
-                        .HasDatabaseName("ix_perfil_cod_empresa_nome");
+                        .IsUnique();
 
                     b.ToTable("perfil", (string)null);
                 });
@@ -283,42 +251,34 @@ namespace SFA.Infrastructure.Migrations
                         .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<bool>("Ativo")
-                        .HasColumnType("boolean")
-                        .HasColumnName("ativo");
+                        .HasColumnType("boolean");
 
                     b.Property<int>("CodEmpresa")
-                        .HasColumnType("integer")
-                        .HasColumnName("cod_empresa");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CriadoEm")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("criado_em")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("Login")
                         .IsRequired()
                         .HasMaxLength(120)
-                        .HasColumnType("character varying(120)")
-                        .HasColumnName("login");
+                        .HasColumnType("character varying(120)");
 
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("nome");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("password_hash");
+                        .HasColumnType("text");
 
-                    b.HasKey("Id")
-                        .HasName("pk_usuario");
+                    b.HasKey("Id");
 
                     b.HasIndex("CodEmpresa", "Login")
-                        .IsUnique()
-                        .HasDatabaseName("ix_usuario_cod_empresa_login");
+                        .IsUnique();
 
                     b.ToTable("usuario", (string)null);
                 });
@@ -337,14 +297,11 @@ namespace SFA.Infrastructure.Migrations
                         .HasColumnName("perfil_id")
                         .HasDefaultValueSql("gen_random_uuid()");
 
-                    b.HasKey("UsuarioId", "PerfilId")
-                        .HasName("pk_usuario_perfil");
+                    b.HasKey("UsuarioId", "PerfilId");
 
-                    b.HasIndex("PerfilId")
-                        .HasDatabaseName("ix_usuario_perfil_perfil_id");
+                    b.HasIndex("PerfilId");
 
-                    b.HasIndex("UsuarioId")
-                        .HasDatabaseName("ix_usuario_perfil_usuario_id");
+                    b.HasIndex("UsuarioId");
 
                     b.ToTable("usuario_perfil", (string)null);
                 });
@@ -355,15 +312,13 @@ namespace SFA.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("PacienteId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_agendamento_pacientes_paciente_id");
+                        .IsRequired();
 
                     b.HasOne("SFA.Domain.Entities.Usuario", "Profissional")
                         .WithMany()
                         .HasForeignKey("ProfissionalId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_agendamento_usuarios_profissional_id");
+                        .IsRequired();
 
                     b.Navigation("Paciente");
 
@@ -376,15 +331,13 @@ namespace SFA.Infrastructure.Migrations
                         .WithMany("UsuariosPerfis")
                         .HasForeignKey("PerfilId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_usuario_perfil_perfil_perfil_id");
+                        .IsRequired();
 
                     b.HasOne("SFA.Domain.Entities.Usuario", "Usuario")
                         .WithMany("UsuariosPerfis")
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_usuario_perfil_usuario_usuario_id");
+                        .IsRequired();
 
                     b.Navigation("Perfil");
 
