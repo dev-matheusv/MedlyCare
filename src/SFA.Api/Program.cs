@@ -1,4 +1,5 @@
 using System.Text;
+using Amazon;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -11,6 +12,8 @@ using SFA.Infrastructure;
 using FluentValidation;
 using Npgsql;
 using SFA.Api.Middlewares;
+using Amazon.RDS.Util;
+using Amazon.Runtime.Credentials;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,12 +51,57 @@ string BuildConnectionString(IConfiguration cfg)
   return csb.ToString();
 }
 
-
-var connString = BuildConnectionString(builder.Configuration);
+var useIam = string.Equals(
+  builder.Configuration["DB_AUTH_MODE"],
+  "IAM",
+  StringComparison.OrdinalIgnoreCase
+);
 
 builder.Services.AddDbContext<SfaDbContext>(o =>
 {
-  o.UseNpgsql(connString);
+  var connString = BuildConnectionString(builder.Configuration);
+
+  if (useIam)
+  {
+    // AWS Region como RegionEndpoint
+    var regionString =
+      builder.Configuration["AWS_REGION"] ??
+      Environment.GetEnvironmentVariable("AWS_REGION") ??
+      "sa-east-1";
+
+    var region = RegionEndpoint.GetBySystemName(regionString);
+
+    // Credenciais da task role (ECS)
+    var credentials = DefaultAWSCredentialsIdentityResolver.GetCredentials();
+
+    var dsb = new NpgsqlDataSourceBuilder(connString);
+
+    // Npgsql 8.0.3 => provider recebe (csb, ct)
+    dsb.UsePeriodicPasswordProvider(
+      (csb, _) =>
+      {
+        var token = RDSAuthTokenGenerator.GenerateAuthToken(
+          credentials,     // credenciais IAM
+          region,          // RegionEndpoint
+          csb.Host,        // host do banco
+          csb.Port,        // porta
+          csb.Username     // usuário
+        );
+
+        return new ValueTask<string>(token);
+      },
+      TimeSpan.FromMinutes(5), // refresh OK
+      TimeSpan.FromMinutes(1)  // refresh em caso de erro
+    );
+
+    var dataSource = dsb.Build();
+    o.UseNpgsql(dataSource);
+  }
+  else
+  {
+    o.UseNpgsql(connString);
+  }
+
   o.UseSnakeCaseNamingConvention();
 });
 
