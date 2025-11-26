@@ -18,9 +18,9 @@ using Amazon.Runtime.Credentials;
 var builder = WebApplication.CreateBuilder(args);
 
 // Serilog básico
-builder.Host.UseSerilog((ctx, lc) => lc
-    .ReadFrom.Configuration(ctx.Configuration)
-    .WriteTo.Console());
+// builder.Host.UseSerilog((ctx, lc) => lc
+//     .ReadFrom.Configuration(ctx.Configuration)
+//     .WriteTo.Console());
 
 string BuildConnectionString(IConfiguration cfg)
 {
@@ -43,7 +43,6 @@ string BuildConnectionString(IConfiguration cfg)
   if(!builder.Environment.IsDevelopment()){
     csb.SslMode = SslMode.Require;
   }
-  
 
   Log.Information("DB: Host={Host} Port={Port} Db={Db} User={User} (merge appsettings + env)",
     csb.Host, csb.Port, csb.Database, csb.Username);
@@ -114,16 +113,28 @@ builder.Services.AddDbContext<SfaDbContext>(o =>
   o.UseSnakeCaseNamingConvention();
 });
 
-// Config do cors pro front
-// Lê AllowedOrigins tanto como array (Cors:AllowedOrigins:0,1,2) quanto como CSV (Cors:AllowedOrigins)
-string[]? allowedArray = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+// Config do CORS pro front
+string[]? allowedArray = builder.Configuration
+  .GetSection("Cors:AllowedOrigins")
+  .Get<string[]>();
+
 var allowedCsv = builder.Configuration["Cors:AllowedOrigins"];
 
-string[] allowed =
-  allowedArray is { Length: > 0 }
-    ? allowedArray
-    : (allowedCsv?.Split(',', ';', ' ',
-      (char)(StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) ?? Array.Empty<string>());
+string[] allowed = Array.Empty<string>();
+
+if (allowedArray is { Length: > 0 })
+{
+  allowed = allowedArray
+    .Where(x => !string.IsNullOrWhiteSpace(x))
+    .ToArray();
+}
+else if (!string.IsNullOrWhiteSpace(allowedCsv))
+{
+  allowed = allowedCsv
+    .Split(',', ';', ' ',
+      (char)(StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+    .ToArray();
+}
 
 builder.Services.AddCors(options =>
 {
@@ -134,15 +145,14 @@ builder.Services.AddCors(options =>
       policy.WithOrigins(allowed)
         .AllowAnyHeader()
         .AllowAnyMethod()
-        .AllowCredentials(); // só quando há origens explícitas
+        .AllowCredentials();
     }
     else
     {
-      // fallback seguro: libera sem credenciais
+      // fallback: libera geral sem credenciais
       policy.AllowAnyOrigin()
         .AllowAnyHeader()
         .AllowAnyMethod();
-      // NÃO usar AllowCredentials com AllowAnyOrigin
     }
   });
 });
