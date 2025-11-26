@@ -59,11 +59,18 @@ var useIam = string.Equals(
 
 builder.Services.AddDbContext<SfaDbContext>(o =>
 {
-  var connString = BuildConnectionString(builder.Configuration);
+  var baseConnString = BuildConnectionString(builder.Configuration);
 
   if (useIam)
   {
-    // AWS Region como RegionEndpoint
+    // monta builder a partir da connection string base
+    var csb = new NpgsqlConnectionStringBuilder(baseConnString);
+
+    // em modo IAM NÃO pode ter password/passfile
+    csb.Password = null;
+    csb.Passfile = null;
+
+    // região
     var regionString =
       builder.Configuration["AWS_REGION"] ??
       Environment.GetEnvironmentVariable("AWS_REGION") ??
@@ -71,27 +78,28 @@ builder.Services.AddDbContext<SfaDbContext>(o =>
 
     var region = RegionEndpoint.GetBySystemName(regionString);
 
-    // Credenciais da task role (ECS)
+    // credenciais da task role (ECS)
     var credentials = DefaultAWSCredentialsIdentityResolver.GetCredentials();
 
-    var dsb = new NpgsqlDataSourceBuilder(connString);
+    // usa a connection string sem senha
+    var dsb = new NpgsqlDataSourceBuilder(csb.ConnectionString);
 
-    // Npgsql 8.0.3 => provider recebe (csb, ct)
+    // Npgsql 8.0.3: provider (csb, ct), + success/failed interval
     dsb.UsePeriodicPasswordProvider(
-      (csb, _) =>
+      (builderCsb, _) =>
       {
         var token = RDSAuthTokenGenerator.GenerateAuthToken(
-          credentials,     // credenciais IAM
-          region,          // RegionEndpoint
-          csb.Host,        // host do banco
-          csb.Port,        // porta
-          csb.Username     // usuário
+          credentials,
+          region,
+          builderCsb.Host,
+          builderCsb.Port,
+          builderCsb.Username
         );
 
         return new ValueTask<string>(token);
       },
-      TimeSpan.FromMinutes(5), // refresh OK
-      TimeSpan.FromMinutes(1)  // refresh em caso de erro
+      TimeSpan.FromMinutes(5),
+      TimeSpan.FromMinutes(1)
     );
 
     var dataSource = dsb.Build();
@@ -99,7 +107,8 @@ builder.Services.AddDbContext<SfaDbContext>(o =>
   }
   else
   {
-    o.UseNpgsql(connString);
+    // modo antigo, com senha fixa
+    o.UseNpgsql(baseConnString);
   }
 
   o.UseSnakeCaseNamingConvention();
