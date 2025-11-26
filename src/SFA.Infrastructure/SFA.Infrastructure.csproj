@@ -17,4 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\SFA.Domain\SFA.Domain.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Migrations\" />
+  </ItemGroup>
 </Project>
