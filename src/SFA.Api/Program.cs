@@ -14,13 +14,16 @@ using Npgsql;
 using SFA.Api.Middlewares;
 using Amazon.RDS.Util;
 using Amazon.Runtime.Credentials;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Serilog básico
 builder.Host.UseSerilog((ctx, lc) => lc
-    .ReadFrom.Configuration(ctx.Configuration)
-    .WriteTo.Console());
+  .ReadFrom.Configuration(ctx.Configuration)
+  .Enrich.FromLogContext()
+  .WriteTo.Console());
+
 
 string BuildConnectionString(IConfiguration cfg)
 {
@@ -236,7 +239,19 @@ if (app.Environment.IsStaging() || app.Environment.IsDevelopment())
 
 app.UseErrorHandling();
 
-app.UseSerilogRequestLogging();
+app.UseSerilogRequestLogging(opts =>
+{
+  opts.GetLevel = (ctx, _, ex) =>
+  {
+    if (ex != null) return LogEventLevel.Error;
+
+    // Evita logar 200/201/204
+    return ctx.Response.StatusCode >= 500
+      ? LogEventLevel.Error
+      : LogEventLevel.Warning;
+  };
+});
+
 app.UseSwagger();
 app.UseSwaggerUI();
 
