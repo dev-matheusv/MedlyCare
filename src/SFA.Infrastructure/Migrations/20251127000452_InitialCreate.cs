@@ -19,16 +19,16 @@ namespace SFA.Infrastructure.Migrations
                 name: "empresa",
                 columns: table => new
                 {
-                    CodEmpresa = table.Column<int>(type: "integer", nullable: false)
+                    cod_empresa = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
-                    Nome = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    Ativa = table.Column<bool>(type: "boolean", nullable: false),
-                    CriadoEm = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()")
+                    nome = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    ativa = table.Column<bool>(type: "boolean", nullable: false),
+                    criado_em = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()")
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_empresa", x => x.CodEmpresa);
+                    table.PrimaryKey("pk_empresa", x => x.cod_empresa);
                 });
 
             migrationBuilder.CreateTable(
@@ -36,22 +36,22 @@ namespace SFA.Infrastructure.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
-                    CodEmpresa = table.Column<int>(type: "integer", nullable: false),
-                    Nome = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
-                    Documento = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    DataNascimento = table.Column<DateOnly>(type: "date", nullable: true),
-                    Telefone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
-                    Email = table.Column<string>(type: "character varying(180)", maxLength: 180, nullable: true),
-                    Ativo = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
-                    CriadoEm = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()"),
-                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
-                    DeletedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    DeletedBy = table.Column<Guid>(type: "uuid", nullable: true),
-                    DeletedReason = table.Column<string>(type: "text", nullable: true)
+                    cod_empresa = table.Column<int>(type: "integer", nullable: false),
+                    nome = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
+                    documento = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    data_nascimento = table.Column<DateOnly>(type: "date", nullable: true),
+                    telefone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    email = table.Column<string>(type: "character varying(180)", maxLength: 180, nullable: true),
+                    ativo = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    criado_em = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()"),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false),
+                    deleted_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    deleted_by = table.Column<Guid>(type: "uuid", nullable: true),
+                    deleted_reason = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_paciente", x => x.id);
+                    table.PrimaryKey("pk_paciente", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -59,14 +59,14 @@ namespace SFA.Infrastructure.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
-                    CodEmpresa = table.Column<int>(type: "integer", nullable: false),
-                    Nome = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: false),
-                    CriadoEm = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()"),
-                    Ativo = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
+                    cod_empresa = table.Column<int>(type: "integer", nullable: false),
+                    nome = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: false),
+                    criado_em = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()"),
+                    ativo = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_perfil", x => x.id);
+                    table.PrimaryKey("pk_perfil", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -74,16 +74,16 @@ namespace SFA.Infrastructure.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
-                    CodEmpresa = table.Column<int>(type: "integer", nullable: false),
-                    Login = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
-                    Nome = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    PasswordHash = table.Column<string>(type: "text", nullable: false),
-                    Ativo = table.Column<bool>(type: "boolean", nullable: false),
-                    CriadoEm = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()")
+                    cod_empresa = table.Column<int>(type: "integer", nullable: false),
+                    login = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
+                    nome = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    password_hash = table.Column<string>(type: "text", nullable: false),
+                    ativo = table.Column<bool>(type: "boolean", nullable: false),
+                    criado_em = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()")
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_usuario", x => x.id);
+                    table.PrimaryKey("pk_usuario", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -109,15 +109,15 @@ namespace SFA.Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_agendamento", x => x.id);
+                    table.PrimaryKey("pk_agendamento", x => x.id);
                     table.ForeignKey(
-                        name: "FK_agendamento_paciente_paciente_id",
+                        name: "fk_agendamento_pacientes_paciente_id",
                         column: x => x.paciente_id,
                         principalTable: "paciente",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_agendamento_usuario_profissional_id",
+                        name: "fk_agendamento_usuarios_profissional_id",
                         column: x => x.profissional_id,
                         principalTable: "usuario",
                         principalColumn: "id",
@@ -133,15 +133,15 @@ namespace SFA.Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_usuario_perfil", x => new { x.usuario_id, x.perfil_id });
+                    table.PrimaryKey("pk_usuario_perfil", x => new { x.usuario_id, x.perfil_id });
                     table.ForeignKey(
-                        name: "FK_usuario_perfil_perfil_perfil_id",
+                        name: "fk_usuario_perfil_perfil_perfil_id",
                         column: x => x.perfil_id,
                         principalTable: "perfil",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_usuario_perfil_usuario_usuario_id",
+                        name: "fk_usuario_perfil_usuario_usuario_id",
                         column: x => x.usuario_id,
                         principalTable: "usuario",
                         principalColumn: "id",
@@ -149,59 +149,59 @@ namespace SFA.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_agendamento_cod_empresa_paciente_id_inicio_utc",
+                name: "ix_agendamento_cod_empresa_paciente_id_inicio_utc",
                 table: "agendamento",
                 columns: new[] { "cod_empresa", "paciente_id", "inicio_utc" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_agendamento_cod_empresa_profissional_id_inicio_utc",
+                name: "ix_agendamento_cod_empresa_profissional_id_inicio_utc",
                 table: "agendamento",
                 columns: new[] { "cod_empresa", "profissional_id", "inicio_utc" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_agendamento_paciente_id",
+                name: "ix_agendamento_paciente_id",
                 table: "agendamento",
                 column: "paciente_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_agendamento_profissional_id",
+                name: "ix_agendamento_profissional_id",
                 table: "agendamento",
                 column: "profissional_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_empresa_Nome",
+                name: "ix_empresa_nome",
                 table: "empresa",
-                column: "Nome");
+                column: "nome");
 
             migrationBuilder.CreateIndex(
-                name: "IX_paciente_CodEmpresa_Documento",
+                name: "ix_paciente_cod_empresa_documento",
                 table: "paciente",
-                columns: new[] { "CodEmpresa", "Documento" });
+                columns: new[] { "cod_empresa", "documento" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_paciente_CodEmpresa_Nome",
+                name: "ix_paciente_cod_empresa_nome",
                 table: "paciente",
-                columns: new[] { "CodEmpresa", "Nome" });
+                columns: new[] { "cod_empresa", "nome" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_perfil_CodEmpresa_Nome",
+                name: "ix_perfil_cod_empresa_nome",
                 table: "perfil",
-                columns: new[] { "CodEmpresa", "Nome" },
+                columns: new[] { "cod_empresa", "nome" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_usuario_CodEmpresa_Login",
+                name: "ix_usuario_cod_empresa_login",
                 table: "usuario",
-                columns: new[] { "CodEmpresa", "Login" },
+                columns: new[] { "cod_empresa", "login" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_usuario_perfil_perfil_id",
+                name: "ix_usuario_perfil_perfil_id",
                 table: "usuario_perfil",
                 column: "perfil_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_usuario_perfil_usuario_id",
+                name: "ix_usuario_perfil_usuario_id",
                 table: "usuario_perfil",
                 column: "usuario_id");
         }

@@ -7,8 +7,6 @@ public static class DbInitializer
 {
   public static async Task SeedAsync(SfaDbContext db)
   {
-    await db.Database.EnsureCreatedAsync();
-
     if (!await db.Empresas.AnyAsync())
     {
       db.Empresas.Add(new Empresa { Nome = "Clínica SFA", Ativa = true });
