@@ -24,8 +24,7 @@ builder.Host.UseSerilog((ctx, lc) => lc
   .Enrich.FromLogContext()
   .WriteTo.Console());
 
-
-string BuildConnectionString(IConfiguration cfg)
+string BuildConnectionString(IConfiguration cfg, IHostEnvironment env)
 {
   var baseCs = cfg.GetConnectionString("Default") ?? "";
   var csb = new NpgsqlConnectionStringBuilder(baseCs);
@@ -42,8 +41,8 @@ string BuildConnectionString(IConfiguration cfg)
   if (!string.IsNullOrWhiteSpace(pass)) csb.Password = pass;
   if (int.TryParse(portStr, out var port) && port > 0) csb.Port = port;
 
-  // RDS geralmente exige SSL
-  if(!builder.Environment.IsDevelopment()){
+  if (!env.IsDevelopment())
+  {
     csb.SslMode = SslMode.Require;
   }
 
@@ -53,40 +52,31 @@ string BuildConnectionString(IConfiguration cfg)
   return csb.ToString();
 }
 
-var useIam = string.Equals(
-  builder.Configuration["DB_AUTH_MODE"],
-  "IAM",
-  StringComparison.OrdinalIgnoreCase
-);
-
-builder.Services.AddDbContext<SfaDbContext>(o =>
+builder.Services.AddSingleton<NpgsqlDataSource>(sp =>
 {
-  var baseConnString = BuildConnectionString(builder.Configuration);
+  var cfg = sp.GetRequiredService<IConfiguration>();
+  var env = sp.GetRequiredService<IHostEnvironment>();
+  
+  var useIam = string.Equals(cfg["DB_AUTH_MODE"], "IAM", StringComparison.OrdinalIgnoreCase);
+
+  var baseConnString = BuildConnectionString(cfg, env);
+  var csb = new NpgsqlConnectionStringBuilder(baseConnString);
 
   if (useIam)
   {
-    // monta builder a partir da connection string base
-    var csb = new NpgsqlConnectionStringBuilder(baseConnString);
-
-    // em modo IAM NÃO pode ter password/passfile
     csb.Password = null;
     csb.Passfile = null;
 
-    // região
     var regionString =
-      builder.Configuration["AWS_REGION"] ??
+      cfg["AWS_REGION"] ??
       Environment.GetEnvironmentVariable("AWS_REGION") ??
       "sa-east-1";
 
     var region = RegionEndpoint.GetBySystemName(regionString);
-
-    // credenciais da task role (ECS)
     var credentials = DefaultAWSCredentialsIdentityResolver.GetCredentials();
 
-    // usa a connection string sem senha
     var dsb = new NpgsqlDataSourceBuilder(csb.ConnectionString);
 
-    // Npgsql 8.0.3: provider (csb, ct), + success/failed interval
     dsb.UsePeriodicPasswordProvider(
       (builderCsb, _) =>
       {
@@ -104,15 +94,19 @@ builder.Services.AddDbContext<SfaDbContext>(o =>
       TimeSpan.FromMinutes(1)
     );
 
-    var dataSource = dsb.Build();
-    o.UseNpgsql(dataSource);
+    return dsb.Build();
   }
   else
   {
-    // modo antigo, com senha fixa
-    o.UseNpgsql(baseConnString);
+    return NpgsqlDataSource.Create(csb.ConnectionString);
   }
+});
 
+builder.Services.AddDbContext<SfaDbContext>((sp, o) =>
+{
+  var dataSource = sp.GetRequiredService<NpgsqlDataSource>();
+
+  o.UseNpgsql(dataSource);
   o.UseSnakeCaseNamingConvention();
 });
 
@@ -134,9 +128,7 @@ if (allowedArray is { Length: > 0 })
 else if (!string.IsNullOrWhiteSpace(allowedCsv))
 {
   allowed = allowedCsv
-    .Split(',', ';', ' ',
-      (char)(StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-    .ToArray();
+    .Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }
 
 builder.Services.AddCors(options =>
@@ -245,10 +237,12 @@ app.UseSerilogRequestLogging(opts =>
   {
     if (ex != null) return LogEventLevel.Error;
 
-    // Evita logar 200/201/204
-    return ctx.Response.StatusCode >= 500
-      ? LogEventLevel.Error
-      : LogEventLevel.Warning;
+    var status = ctx.Response.StatusCode;
+
+    if (status >= 500) return LogEventLevel.Error;
+    if (status >= 400) return LogEventLevel.Warning;
+
+    return LogEventLevel.Debug; // <- sucesso não polui CloudWatch
   };
 });
 
