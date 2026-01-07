@@ -14,6 +14,8 @@ public class SfaDbContext : DbContext
     public DbSet<UsuarioPerfil> UsuariosPerfis => Set<UsuarioPerfil>();
     public DbSet<Paciente> Pacientes => Set<Paciente>();
     public DbSet<Agendamento> Agendamentos => Set<Agendamento>();
+    public DbSet<Atendimento> Atendimentos => Set<Atendimento>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
       modelBuilder.HasPostgresExtension("pgcrypto");

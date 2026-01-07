@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SFA.Infrastructure;
@@ -11,9 +12,11 @@ using SFA.Infrastructure;
 namespace SFA.Infrastructure.Migrations
 {
     [DbContext(typeof(SfaDbContext))]
-    partial class SfaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260107015112_FixEmpresaKeyMapping")]
+    partial class FixEmpresaKeyMapping
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -115,109 +118,6 @@ namespace SFA.Infrastructure.Migrations
                         .HasDatabaseName("ix_agendamento_cod_empresa_profissional_id_inicio_utc");
 
                     b.ToTable("agendamento", (string)null);
-                });
-
-            modelBuilder.Entity("SFA.Domain.Entities.Atendimento", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<Guid?>("AgendamentoId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("agendamento_id");
-
-                    b.Property<DateTime?>("AlteradoEm")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("alterado_em");
-
-                    b.Property<Guid?>("AlteradoPorUsuarioId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("alterado_por_usuario_id");
-
-                    b.Property<int>("CodEmpresa")
-                        .HasColumnType("integer")
-                        .HasColumnName("cod_empresa");
-
-                    b.Property<DateTime>("CriadoEm")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("criado_em")
-                        .HasDefaultValueSql("now() at time zone 'utc'");
-
-                    b.Property<Guid>("CriadoPorUsuarioId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("criado_por_usuario_id");
-
-                    b.Property<DateTimeOffset?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
-
-                    b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("deleted_by");
-
-                    b.Property<string>("DeletedReason")
-                        .HasColumnType("text")
-                        .HasColumnName("deleted_reason");
-
-                    b.Property<DateTimeOffset?>("FinalizadoUtc")
-                        .HasColumnType("timestamptz")
-                        .HasColumnName("finalizado_utc");
-
-                    b.Property<DateTimeOffset>("InicioUtc")
-                        .HasColumnType("timestamptz")
-                        .HasColumnName("inicio_utc");
-
-                    b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("Observacoes")
-                        .HasColumnType("text")
-                        .HasColumnName("observacoes");
-
-                    b.Property<Guid>("PacienteId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("paciente_id");
-
-                    b.Property<Guid>("ProfissionalId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("profissional_id");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer")
-                        .HasColumnName("status");
-
-                    b.HasKey("Id")
-                        .HasName("pk_atendimento");
-
-                    b.HasIndex("AgendamentoId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_atendimento_agendamento_id");
-
-                    b.HasIndex("PacienteId")
-                        .HasDatabaseName("ix_atendimento_paciente_id");
-
-                    b.HasIndex("ProfissionalId")
-                        .HasDatabaseName("ix_atendimento_profissional_id");
-
-                    b.HasIndex("CodEmpresa", "AgendamentoId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_atendimento_cod_empresa_agendamento_id")
-                        .HasFilter("\"agendamento_id\" IS NOT NULL");
-
-                    b.HasIndex("CodEmpresa", "PacienteId", "InicioUtc")
-                        .HasDatabaseName("ix_atendimento_cod_empresa_paciente_id_inicio_utc");
-
-                    b.HasIndex("CodEmpresa", "ProfissionalId", "InicioUtc")
-                        .HasDatabaseName("ix_atendimento_cod_empresa_profissional_id_inicio_utc");
-
-                    b.ToTable("atendimento", (string)null);
                 });
 
             modelBuilder.Entity("SFA.Domain.Entities.Empresa", b =>
@@ -472,35 +372,6 @@ namespace SFA.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_agendamento_usuarios_profissional_id");
-
-                    b.Navigation("Paciente");
-
-                    b.Navigation("Profissional");
-                });
-
-            modelBuilder.Entity("SFA.Domain.Entities.Atendimento", b =>
-                {
-                    b.HasOne("SFA.Domain.Entities.Agendamento", "Agendamento")
-                        .WithOne()
-                        .HasForeignKey("SFA.Domain.Entities.Atendimento", "AgendamentoId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_atendimento_agendamento_agendamento_id");
-
-                    b.HasOne("SFA.Domain.Entities.Paciente", "Paciente")
-                        .WithMany()
-                        .HasForeignKey("PacienteId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_atendimento_pacientes_paciente_id");
-
-                    b.HasOne("SFA.Domain.Entities.Usuario", "Profissional")
-                        .WithMany()
-                        .HasForeignKey("ProfissionalId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_atendimento_usuarios_profissional_id");
-
-                    b.Navigation("Agendamento");
 
                     b.Navigation("Paciente");
 

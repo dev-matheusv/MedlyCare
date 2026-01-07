@@ -301,5 +301,6 @@ app.MapPacienteEndpoints();
 app.MapPerfilEndpoints();
 app.MapUsuarioPerfilEndpoints();
 app.MapAgendamentoEndpoints();
+app.MapAtendimentoEndpoints();
 
 app.Run();

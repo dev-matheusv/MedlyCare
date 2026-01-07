@@ -8,8 +8,8 @@ public static class UsuarioPerfilEndpoints
 {
     public static void MapUsuarioPerfilEndpoints(this IEndpointRouteBuilder app)
     {
-        var g = app.MapGroup("/api/v1/usuarios/{usuarioId:int}/perfis")
-                   .RequireAuthorization("Admin"); // somente Admin
+      var g = app.MapGroup("/api/v1/usuarios/{usuarioId:guid}/perfis")
+        .RequireAuthorization("Admin"); // somente Admin
 
         static int GetCodEmpresa(ClaimsPrincipal user)
         {
