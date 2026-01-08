@@ -15,6 +15,8 @@ public class SfaDbContext : DbContext
     public DbSet<Paciente> Pacientes => Set<Paciente>();
     public DbSet<Agendamento> Agendamentos => Set<Agendamento>();
     public DbSet<Atendimento> Atendimentos => Set<Atendimento>();
+    public DbSet<ConfirmacaoAgendamento> ConfirmacoesAgendamento => Set<ConfirmacaoAgendamento>();
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

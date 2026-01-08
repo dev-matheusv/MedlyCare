@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>SFA.Api</RootNamespace>
     <UserSecretsId>cfd5ff93-1def-45a0-a7b4-511db2f885d5</UserSecretsId>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\SFA.Application\SFA.Application.csproj" />

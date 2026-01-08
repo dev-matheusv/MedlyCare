@@ -1,8 +1,10 @@
+using System.Net;
+using System.Security.Claims;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using SFA.Application.Agendamentos;
+using SFA.Domain.Entities;
 using SFA.Infrastructure;
-using System.Security.Claims;
 
 namespace SFA.Api.Endpoints;
 
@@ -165,7 +167,7 @@ public static class AgendamentoEndpoints
 
             var userId = GetUserId(u) ?? Guid.Empty;
 
-            var entity = new Domain.Entities.Agendamento
+            var entity = new Agendamento
             {
                 CodEmpresa = codEmp,
                 PacienteId = dto.PacienteId,
@@ -477,6 +479,230 @@ public static class AgendamentoEndpoints
                 passoMin = (int)step.TotalMinutes,
                 slots = livres
             });
+        });
+        
+        // PUBLIC: confirmação via link (sem autenticação)
+        var pub = app.MapGroup("/api/v1/public/confirmacoes");
+
+        static IResult Html(string title, string msg)
+        {
+          var html = """
+           <!doctype html>
+           <html lang="pt-br">
+           <head>
+             <meta charset="utf-8"/>
+             <meta name="viewport" content="width=device-width,initial-scale=1"/>
+             <title>{{TITLE}}</title>
+             <style>
+               body { font-family: Arial, sans-serif; padding: 24px; max-width: 720px; margin: 0 auto; }
+               .box { border: 1px solid #e5e7eb; border-radius: 10px; padding: 18px; }
+               h1 { font-size: 20px; margin: 0 0 8px 0; }
+               p { margin: 0; line-height: 1.4; }
+             </style>
+           </head>
+           <body>
+             <div class="box">
+               <h1>{{TITLE}}</h1>
+               <p>{{MSG}}</p>
+             </div>
+           </body>
+           </html>
+           """;
+
+          html = html.Replace("{{TITLE}}", WebUtility.HtmlEncode(title))
+            .Replace("{{MSG}}", WebUtility.HtmlEncode(msg));
+
+          return Results.Content(html, "text/html; charset=utf-8");
+        }
+        
+        pub.MapGet("/{token:guid}/sim", async (Guid token, HttpContext ctx, SfaDbContext db) =>
+        {
+          var c = await db.ConfirmacoesAgendamento
+            .SingleOrDefaultAsync(x => x.Token == token);
+
+          if (c is null) return Html("Link inválido", "Esse link não é válido. Entre em contato com a recepção.");
+
+          var now = DateTimeOffset.UtcNow;
+          if (c.ExpiresAtUtc <= now) return Html("Link expirado", "Esse link expirou. Entre em contato com a recepção.");
+
+          if (c.Status != ConfirmacaoAgendamentoStatus.Pendente)
+            return Html("Já registrado", "Sua resposta já foi registrada. Obrigado!");
+
+          // carrega agendamento (ignora filtro IsDeleted)
+          var ag = await db.Agendamentos
+            .IgnoreQueryFilters()
+            .SingleOrDefaultAsync(a => a.Id == c.AgendamentoId && a.CodEmpresa == c.CodEmpresa);
+
+          if (ag is null)
+            return Html("Agendamento não encontrado", "Esse agendamento não existe mais. Entre em contato com a recepção.");
+
+          c.Status = ConfirmacaoAgendamentoStatus.Confirmado;
+          c.RespondidoEmUtc = now;
+          c.RespondidoIp = ctx.Connection.RemoteIpAddress?.ToString();
+          c.UserAgent = ctx.Request.Headers.UserAgent.ToString();
+
+          // atualiza agendamento (se não estiver cancelado)
+          if (ag.Status != "cancelado")
+          {
+            ag.Status = "confirmado";
+            ag.AlteradoEm = DateTime.UtcNow;
+            ag.AlteradoPorUsuarioId = null; // público (sistema)
+          }
+
+          await db.SaveChangesAsync();
+          return Html("Confirmado", "Presença confirmada com sucesso. Obrigado!");
+        });
+
+        pub.MapGet("/{token:guid}/nao", async (Guid token, HttpContext ctx, SfaDbContext db) =>
+        {
+          var c = await db.ConfirmacoesAgendamento
+            .SingleOrDefaultAsync(x => x.Token == token);
+
+          if (c is null) return Html("Link inválido", "Esse link não é válido. Entre em contato com a recepção.");
+
+          var now = DateTimeOffset.UtcNow;
+          if (c.ExpiresAtUtc <= now) return Html("Link expirado", "Esse link expirou. Entre em contato com a recepção.");
+
+          if (c.Status != ConfirmacaoAgendamentoStatus.Pendente)
+            return Html("Já registrado", "Sua resposta já foi registrada. Obrigado!");
+
+          // carrega agendamento (ignora filtro IsDeleted)
+          var ag = await db.Agendamentos
+            .IgnoreQueryFilters()
+            .SingleOrDefaultAsync(a => a.Id == c.AgendamentoId && a.CodEmpresa == c.CodEmpresa);
+
+          if (ag is null)
+            return Html("Agendamento não encontrado", "Esse agendamento não existe mais. Entre em contato com a recepção.");
+
+          c.Status = ConfirmacaoAgendamentoStatus.Recusado;
+          c.RespondidoEmUtc = now;
+          c.RespondidoIp = ctx.Connection.RemoteIpAddress?.ToString();
+          c.UserAgent = ctx.Request.Headers.UserAgent.ToString();
+
+          // cancela agendamento
+          ag.Status = "cancelado";
+          ag.AlteradoEm = DateTime.UtcNow;
+          ag.AlteradoPorUsuarioId = null;
+
+          await db.SaveChangesAsync();
+          return Html("Ok", "Registramos que você não poderá comparecer. Obrigado!");
+        });
+
+        static string DigitsOnly(string? s)
+        {
+          if (string.IsNullOrWhiteSpace(s)) return "";
+          var chars = s.Where(char.IsDigit).ToArray();
+          return new string(chars);
+        }
+
+        static string NormalizeWhatsappPhone(string? telefone)
+        {
+          var d = DigitsOnly(telefone);
+          if (string.IsNullOrWhiteSpace(d)) return "";
+
+          // Se já vier com 55, mantém
+          if (d.StartsWith("55")) return d;
+
+          // Se vier 10/11 dígitos, assume BR e prefixa 55
+          if (d.Length is 10 or 11) return "55" + d;
+
+          return d; // fallback
+        }
+
+        g.MapPost("/{id:guid}/confirmacao/gerar", async (ClaimsPrincipal u, Guid id, HttpContext ctx, SfaDbContext db, int dias = 3) =>
+        {
+          var codEmp = GetCodEmpresa(u);
+
+          // 1 query só: traz tudo que precisa pra validar e montar msg
+          var data = await db.Agendamentos.AsNoTracking()
+            .Where(a => a.Id == id && a.CodEmpresa == codEmp)
+            .Join(db.Pacientes.AsNoTracking(), a => a.PacienteId, p => p.Id, (a, p) => new
+            {
+              Ag = a,
+              PacienteNome = p.Nome,
+              p.Telefone
+            })
+            .Join(db.Usuarios.AsNoTracking(), ap => ap.Ag.ProfissionalId, prof => prof.Id, (ap, prof) => new
+            {
+              ap.Ag.Id,
+              ap.Ag.CodEmpresa,
+              ap.Ag.Status,
+              ap.Ag.InicioUtc,
+              ap.Ag.FimUtc,
+              ap.PacienteNome,
+              ap.Telefone,
+              ProfNome = prof.Nome
+            })
+            .FirstOrDefaultAsync();
+
+          if (data is null) return Results.NotFound(new { message = "agendamento_nao_encontrado" });
+          if (data.Status == "cancelado") return Results.Conflict(new { message = "agendamento_cancelado" });
+
+          // expiração
+          var now = DateTimeOffset.UtcNow;
+          var maxExp = now.AddDays(Math.Clamp(dias, 1, 7));
+          var expires = data.FimUtc <= now ? now.AddHours(2) : data.FimUtc;
+          if (expires > maxExp) expires = maxExp;
+
+          // cria/atualiza confirmação (track)
+          var c = await db.ConfirmacoesAgendamento
+            .FirstOrDefaultAsync(x => x.AgendamentoId == id);
+
+          if (c is null)
+          {
+            c = new ConfirmacaoAgendamento
+            {
+              CodEmpresa = codEmp,
+              AgendamentoId = id,
+              Token = Guid.NewGuid(),
+              Status = ConfirmacaoAgendamentoStatus.Pendente,
+              ExpiresAtUtc = expires
+            };
+            db.ConfirmacoesAgendamento.Add(c);
+          }
+          else
+          {
+            // se já respondeu ou expirou, regenera token e volta pra pendente
+            if (c.Status != ConfirmacaoAgendamentoStatus.Pendente || c.ExpiresAtUtc <= now)
+            {
+              c.Token = Guid.NewGuid();
+              c.Status = ConfirmacaoAgendamentoStatus.Pendente;
+              c.RespondidoEmUtc = null;
+              c.RespondidoIp = null;
+              c.UserAgent = null;
+            }
+
+            c.ExpiresAtUtc = expires;
+          }
+
+          await db.SaveChangesAsync();
+
+          var baseUrl = $"{ctx.Request.Scheme}://{ctx.Request.Host}";
+          var linkSim = $"{baseUrl}/api/v1/public/confirmacoes/{c.Token}/sim";
+          var linkNao = $"{baseUrl}/api/v1/public/confirmacoes/{c.Token}/nao";
+
+          var msg =
+          $"Olá, {data.PacienteNome}! Tudo bem?\n\n" +
+          $"Estamos confirmando sua consulta com {data.ProfNome} em " +
+          $"{data.InicioUtc:dd/MM/yyyy} às {data.InicioUtc:HH:mm}.\n\n" +
+          $"👉 Confirmar presença:\n{linkSim}\n\n" +
+          $"❌ Não poderei comparecer:\n{linkNao}";
+
+          var phone = NormalizeWhatsappPhone(data.Telefone);
+          var whatsappUrl = string.IsNullOrWhiteSpace(phone)
+            ? null
+            : $"https://wa.me/{phone}?text={Uri.EscapeDataString(msg)}";
+
+          return Results.Ok(new
+          {
+            agendamentoId = id,
+            token = c.Token,
+            expiresAtUtc = c.ExpiresAtUtc,
+            linkSim,
+            linkNao,
+            mensagem = msg,
+            whatsappUrl
+          });
         });
     }
 }
