@@ -14,4 +14,5 @@ public class Usuario
   public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
 
   public ICollection<UsuarioPerfil> UsuariosPerfis { get; set; } = [];
+  public ICollection<PasswordResetToken> PasswordResetTokens { get; set; } = [];
 }

@@ -217,6 +217,9 @@ builder.Services.AddValidatorsFromAssembly(
   typeof(SFA.Application.Empresas.EmpresaCreateValidator).Assembly
 );
 
+builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Smtp"));
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+
 var app = builder.Build();
 
 // Migrar banco automaticamente em dev (opcional)
