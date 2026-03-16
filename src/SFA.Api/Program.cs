@@ -302,5 +302,6 @@ app.MapPerfilEndpoints();
 app.MapUsuarioPerfilEndpoints();
 app.MapAgendamentoEndpoints();
 app.MapAtendimentoEndpoints();
+app.MapProfissionalEndpoints();
 
 app.Run();
