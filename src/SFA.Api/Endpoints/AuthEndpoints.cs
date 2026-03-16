@@ -1,15 +1,31 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Npgsql;
 using NpgsqlTypes;
 using SFA.Application.Auth;
+using SFA.Domain.Entities;
 using SFA.Infrastructure;
 
 namespace SFA.Api.Endpoints;
 
+public static class TokenHasher
+{
+  public static string Hash(string token)
+  {
+    using var sha = SHA256.Create();
+
+    var bytes = Encoding.UTF8.GetBytes(token);
+
+    var hash = sha.ComputeHash(bytes);
+
+    return Convert.ToBase64String(hash);
+  }
+}
 public static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this IEndpointRouteBuilder routes)
@@ -76,6 +92,20 @@ public static class AuthEndpoints
             if (req.CodEmpresa <= 0 || string.IsNullOrWhiteSpace(req.Email))
                 return Results.BadRequest(new { message = "empresa_email_obrigatorios" });
 
+            var smtp = smtpOptions.Value;
+
+            if (string.IsNullOrWhiteSpace(smtp.Host) ||
+                string.IsNullOrWhiteSpace(smtp.User) ||
+                string.IsNullOrWhiteSpace(smtp.Password) ||
+                string.IsNullOrWhiteSpace(smtp.FromEmail) ||
+                string.IsNullOrWhiteSpace(smtp.ResetBaseUrl))
+            {
+                return Results.Problem(
+                    title: "SMTP configuration missing",
+                    detail: "SMTP settings are not configured in environment variables.",
+                    statusCode: StatusCodes.Status500InternalServerError);
+            }
+
             var email = req.Email.Trim();
 
             var user = await db.Usuarios.FirstOrDefaultAsync(u =>
@@ -94,56 +124,59 @@ public static class AuthEndpoints
                 foreach (var item in tokensAtivos)
                     item.UsadoEm = agora;
 
-                var novoToken = Guid.NewGuid().ToString("N");
+                var token = Guid.NewGuid().ToString("N");
 
-                db.PasswordResetTokens.Add(new Domain.Entities.PasswordResetToken
+                var tokenHash = TokenHasher.Hash(token);
+
+                db.PasswordResetTokens.Add(new PasswordResetToken
                 {
-                    UsuarioId = user.Id,
-                    Token = novoToken,
-                    ExpiraEm = agora.AddHours(1)
+                  UsuarioId = user.Id,
+                  TokenHash = tokenHash,
+                  ExpiraEm = agora.AddHours(1)
                 });
 
                 await db.SaveChangesAsync();
 
-                var baseUrl = smtpOptions.Value.ResetBaseUrl.TrimEnd('/');
-                var link = $"{baseUrl}?token={novoToken}";
+                var link = $"{smtp.ResetBaseUrl.TrimEnd('/')}" +
+                           $"?token={token}";
 
                 var html = $"""
                     <p>Olá, {user.Nome}.</p>
-                    <p>Recebemos uma solicitação para redefinição de senha no MedlyCare.</p>
-                    <p>Clique no link abaixo para cadastrar uma nova senha:</p>
+                    <p>Recebemos uma solicitação de recuperação de senha.</p>
+                    <p>Clique no link abaixo para redefinir:</p>
                     <p><a href="{link}">{link}</a></p>
                     <p>Este link expira em 1 hora.</p>
-                    <p>Se você não solicitou a redefinição, ignore este e-mail.</p>
                     """;
 
                 try
                 {
-                    await emailService.SendAsync(user.Email, "Recuperação de acesso - MedlyCare", html);
+                    await emailService.SendAsync(
+                        user.Email,
+                        "Recuperação de acesso - MedlyCare",
+                        html);
                 }
                 catch
                 {
-                  // ignored
+                    // evita quebrar o endpoint caso SMTP falhe
                 }
             }
 
             return Results.Ok(new
             {
-                message = "Se existir um usuário compatível, um e-mail de recuperação será enviado."
+                message = "Se existir um usuário compatível, um e-mail será enviado."
             });
-        })
-        .WithSummary("Solicita recuperação de acesso por e-mail")
-        .Produces(StatusCodes.Status200OK)
-        .Produces(StatusCodes.Status400BadRequest);
+        });
 
         group.MapPost("/redefinir-senha", async (RedefinirSenhaRequest req, SfaDbContext db) =>
         {
             if (string.IsNullOrWhiteSpace(req.Token) || string.IsNullOrWhiteSpace(req.NovaSenha))
                 return Results.BadRequest(new { message = "token_novaSenha_obrigatorios" });
 
+            var tokenHash = TokenHasher.Hash(req.Token);
+
             var token = await db.PasswordResetTokens
-                .Include(x => x.Usuario)
-                .FirstOrDefaultAsync(x => x.Token == req.Token);
+              .Include(x => x.Usuario)
+              .FirstOrDefaultAsync(x => x.TokenHash == tokenHash);
 
             if (token is null)
                 return Results.BadRequest(new { message = "token_invalido" });

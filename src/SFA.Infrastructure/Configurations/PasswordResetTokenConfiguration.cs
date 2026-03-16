@@ -21,10 +21,10 @@ public class PasswordResetTokenConfiguration : IEntityTypeConfiguration<Password
       .HasColumnName("usuario_id")
       .IsRequired();
 
-    builder.Property(x => x.Token)
-      .HasColumnName("token")
-      .IsRequired()
-      .HasMaxLength(200);
+    builder.Property(x => x.TokenHash)
+      .HasColumnName("token_hash")
+      .HasMaxLength(200)
+      .IsRequired();
 
     builder.Property(x => x.ExpiraEm)
       .HasColumnName("expira_em")
@@ -37,7 +37,8 @@ public class PasswordResetTokenConfiguration : IEntityTypeConfiguration<Password
       .HasColumnName("criado_em")
       .HasDefaultValueSql("now()");
 
-    builder.HasIndex(x => x.Token).IsUnique();
+    builder.HasIndex(x => x.TokenHash)
+      .IsUnique();
     builder.HasIndex(x => x.UsuarioId);
 
     builder.HasOne(x => x.Usuario)
