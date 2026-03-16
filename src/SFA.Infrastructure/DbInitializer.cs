@@ -9,7 +9,7 @@ public static class DbInitializer
   {
     if (!await db.Empresas.AnyAsync())
     {
-      db.Empresas.Add(new Empresa { Nome = "Clínica SFA", Ativa = true });
+      db.Empresas.Add(new Empresa { RazaoSocial = "Clínica SFA", Ativa = true });
       await db.SaveChangesAsync();
     }
 
