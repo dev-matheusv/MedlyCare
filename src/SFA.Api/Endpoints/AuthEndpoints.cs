@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Npgsql;
 using NpgsqlTypes;
+using Serilog;
 using SFA.Application.Auth;
 using SFA.Domain.Entities;
 using SFA.Infrastructure;
@@ -93,17 +94,29 @@ public static class AuthEndpoints
                 return Results.BadRequest(new { message = "empresa_email_obrigatorios" });
 
             var smtp = smtpOptions.Value;
+            
+            Log.Information(
+              "SMTP endpoint config => Host={Host}, Port={Port}, User={User}, FromEmail={FromEmail}, FromName={FromName}, EnableSsl={EnableSsl}, ResetBaseUrl={ResetBaseUrl}",
+              smtp?.Host,
+              smtp?.Port,
+              smtp?.User,
+              smtp?.FromEmail,
+              smtp?.FromName,
+              smtp?.EnableSsl,
+              smtp?.ResetBaseUrl);
 
-            if (string.IsNullOrWhiteSpace(smtp.Host) ||
+            if (smtp == null ||
+                string.IsNullOrWhiteSpace(smtp.Host) ||
+                smtp.Port <= 0 ||
                 string.IsNullOrWhiteSpace(smtp.User) ||
                 string.IsNullOrWhiteSpace(smtp.Password) ||
                 string.IsNullOrWhiteSpace(smtp.FromEmail) ||
                 string.IsNullOrWhiteSpace(smtp.ResetBaseUrl))
             {
-                return Results.Problem(
-                    title: "SMTP configuration missing",
-                    detail: "SMTP settings are not configured in environment variables.",
-                    statusCode: StatusCodes.Status500InternalServerError);
+              return Results.Problem(
+                title: "SMTP configuration missing",
+                detail: $"Host={smtp?.Host}, Port={smtp?.Port}, User={smtp?.User}, FromEmail={smtp?.FromEmail}, ResetBaseUrl={smtp?.ResetBaseUrl}",
+                statusCode: StatusCodes.Status500InternalServerError);
             }
 
             var email = req.Email.Trim();

@@ -18,6 +18,8 @@ using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration.AddEnvironmentVariables();
+
 // Serilog básico
 builder.Host.UseSerilog((ctx, lc) => lc
   .ReadFrom.Configuration(ctx.Configuration)
@@ -218,6 +220,17 @@ builder.Services.AddValidatorsFromAssembly(
 );
 
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Smtp"));
+var smtpSection = builder.Configuration.GetSection("Smtp");
+
+Log.Information(
+  "SMTP startup config => Host={Host}, Port={Port}, User={User}, FromEmail={FromEmail}, FromName={FromName}, EnableSsl={EnableSsl}, ResetBaseUrl={ResetBaseUrl}",
+  smtpSection["Host"],
+  smtpSection["Port"],
+  smtpSection["User"],
+  smtpSection["FromEmail"],
+  smtpSection["FromName"],
+  smtpSection["EnableSsl"],
+  smtpSection["ResetBaseUrl"]);
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
 var app = builder.Build();
