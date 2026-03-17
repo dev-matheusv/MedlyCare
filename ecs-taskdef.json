@@ -17,7 +17,14 @@
       "environment": [
         { "name": "ASPNETCORE_ENVIRONMENT", "value": "Staging" },
         { "name": "DB_AUTH_MODE", "value": "IAM" },
-        { "name": "DB_USER", "value": "sfa_app_user" }
+        { "name": "DB_USER", "value": "sfa_app_user" },
+
+        { "name": "Smtp__Host", "value": "smtp.gmail.com" },
+        { "name": "Smtp__Port", "value": "587" },
+        { "name": "Smtp__FromEmail", "value": "devmatheusoxs@gmail.com" },
+        { "name": "Smtp__FromName", "value": "MedlyCare" },
+        { "name": "Smtp__EnableSsl", "value": "true" },
+        { "name": "Smtp__ResetBaseUrl", "value": "https://staging.medlycare.local/redefinir-senha" }
       ],
       "secrets": [
         { "name": "Jwt__Secret",   "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:Jwt__Secret::" },
@@ -26,7 +33,10 @@
 
         { "name": "DB_HOST", "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:host::" },
         { "name": "DB_PORT", "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:port::" },
-        { "name": "DB_NAME", "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:dbname::" }
+        { "name": "DB_NAME", "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:dbname::" },
+
+        { "name": "Smtp__User", "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:Smtp__User::" },
+        { "name": "Smtp__Password", "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:Smtp__Password::" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
