@@ -94,29 +94,18 @@ public static class AuthEndpoints
                 return Results.BadRequest(new { message = "empresa_email_obrigatorios" });
 
             var smtp = smtpOptions.Value;
-            
-            Log.Information(
-              "SMTP endpoint config => Host={Host}, Port={Port}, User={User}, FromEmail={FromEmail}, FromName={FromName}, EnableSsl={EnableSsl}, ResetBaseUrl={ResetBaseUrl}",
-              smtp?.Host,
-              smtp?.Port,
-              smtp?.User,
-              smtp?.FromEmail,
-              smtp?.FromName,
-              smtp?.EnableSsl,
-              smtp?.ResetBaseUrl);
 
-            if (smtp == null ||
-                string.IsNullOrWhiteSpace(smtp.Host) ||
+            if (string.IsNullOrWhiteSpace(smtp.Host) ||
                 smtp.Port <= 0 ||
                 string.IsNullOrWhiteSpace(smtp.User) ||
                 string.IsNullOrWhiteSpace(smtp.Password) ||
                 string.IsNullOrWhiteSpace(smtp.FromEmail) ||
                 string.IsNullOrWhiteSpace(smtp.ResetBaseUrl))
             {
-              return Results.Problem(
-                title: "SMTP configuration missing",
-                detail: $"Host={smtp?.Host}, Port={smtp?.Port}, User={smtp?.User}, FromEmail={smtp?.FromEmail}, ResetBaseUrl={smtp?.ResetBaseUrl}",
-                statusCode: StatusCodes.Status500InternalServerError);
+                return Results.Problem(
+                    title: "Configuração inválida",
+                    detail: "As configurações de e-mail não foram definidas corretamente.",
+                    statusCode: StatusCodes.Status500InternalServerError);
             }
 
             var email = req.Email.Trim();
@@ -139,19 +128,16 @@ public static class AuthEndpoints
 
                 var token = Guid.NewGuid().ToString("N");
 
-                var tokenHash = TokenHasher.Hash(token);
-
                 db.PasswordResetTokens.Add(new PasswordResetToken
                 {
-                  UsuarioId = user.Id,
-                  TokenHash = tokenHash,
-                  ExpiraEm = agora.AddHours(1)
+                    UsuarioId = user.Id,
+                    TokenHash = token,
+                    ExpiraEm = agora.AddHours(1)
                 });
 
                 await db.SaveChangesAsync();
 
-                var link = $"{smtp.ResetBaseUrl.TrimEnd('/')}" +
-                           $"?token={token}";
+                var link = $"{smtp.ResetBaseUrl.TrimEnd('/')}?token={Uri.EscapeDataString(token)}";
 
                 var html = $"""
                     <p>Olá, {user.Nome}.</p>
@@ -168,9 +154,9 @@ public static class AuthEndpoints
                         "Recuperação de acesso - MedlyCare",
                         html);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // evita quebrar o endpoint caso SMTP falhe
+                    Log.Error(ex, "Erro ao enviar e-mail de recuperação de acesso.");
                 }
             }
 
