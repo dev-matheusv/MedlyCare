@@ -377,54 +377,51 @@ public static class AnexoPacienteEndpoints
             return Results.File(stream, entity.ContentType, enableRangeProcessing: false);
         });
 
-        g.MapDelete("/{id:guid}", async Task<IResult> (
-            ClaimsPrincipal user,
-            HttpContext httpContext,
-            Guid pacienteId,
-            Guid id,
-            AnexoPacienteDeleteDto dto,
-            IValidator<AnexoPacienteDeleteDto> validator,
-            SfaDbContext db,
-            IFileStorageService storage,
-            CancellationToken cancellationToken) =>
+        g.MapPost("/{id:guid}/excluir", async Task<IResult> (
+          ClaimsPrincipal user,
+          HttpContext httpContext,
+          Guid pacienteId,
+          Guid id,
+          [FromBody] AnexoPacienteDeleteDto dto,
+          IValidator<AnexoPacienteDeleteDto> validator,
+          SfaDbContext db,
+          CancellationToken cancellationToken) =>
         {
-            var codEmp = GetCodEmpresa(user);
-            var usuarioId = GetUserId(user);
+          var codEmp = GetCodEmpresa(user);
+          var usuarioId = GetUserId(user);
 
-            var validation = await validator.ValidateAsync(dto, cancellationToken);
-            if (!validation.IsValid)
-              return Results.ValidationProblem(validation.ToDictionary());
+          var validation = await validator.ValidateAsync(dto, cancellationToken);
+          if (!validation.IsValid)
+            return Results.ValidationProblem(validation.ToDictionary());
 
-            var entity = await db.AnexosPaciente
-                .FirstOrDefaultAsync(x =>
-                    x.Id == id &&
-                    x.CodEmpresa == codEmp &&
-                    x.PacienteId == pacienteId,
-                    cancellationToken);
+          var entity = await db.AnexosPaciente
+            .FirstOrDefaultAsync(x =>
+                x.Id == id &&
+                x.CodEmpresa == codEmp &&
+                x.PacienteId == pacienteId,
+              cancellationToken);
 
-            if (entity is null)
-              return Results.NotFound();
+          if (entity is null)
+            return Results.NotFound();
 
-            await storage.DeleteAsync(entity.UrlStorage, cancellationToken);
+          entity.IsDeleted = true;
+          entity.DeletedAt = DateTimeOffset.UtcNow;
+          entity.DeletedBy = usuarioId;
+          entity.DeletedReason = dto.Motivo;
+          entity.AtualizadoEm = DateTime.UtcNow;
 
-            entity.IsDeleted = true;
-            entity.DeletedAt = DateTimeOffset.UtcNow;
-            entity.DeletedBy = usuarioId;
-            entity.DeletedReason = dto.Motivo;
-            entity.AtualizadoEm = DateTime.UtcNow;
+          await db.SaveChangesAsync(cancellationToken);
 
-            await db.SaveChangesAsync(cancellationToken);
+          await RegistrarLogAsync(
+            db,
+            codEmp,
+            entity.Id,
+            usuarioId,
+            AcaoAcessoAnexoPaciente.Excluiu,
+            GetIp(httpContext),
+            cancellationToken);
 
-            await RegistrarLogAsync(
-                db,
-                codEmp,
-                entity.Id,
-                usuarioId,
-                AcaoAcessoAnexoPaciente.Excluiu,
-                GetIp(httpContext),
-                cancellationToken);
-
-            return Results.NoContent();
+          return Results.NoContent();
         });
     }
 }
