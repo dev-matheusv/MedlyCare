@@ -30,6 +30,31 @@ public static class AtendimentoEndpoints
 
         static bool IsProfissionalOnly(ClaimsPrincipal u)
             => u.Claims.Where(c => c.Type == ClaimTypes.Role).All(c => c.Value is "Profissional");
+        
+        static async Task FinalizarAgendamentoRelacionadoAsync(
+          SfaDbContext db,
+          int codEmp,
+          Guid? agendamentoId,
+          Guid? usuarioId)
+        {
+          if (!agendamentoId.HasValue)
+            return;
+
+          var agendamento = await db.Agendamentos
+            .FirstOrDefaultAsync(a =>
+              a.Id == agendamentoId.Value &&
+              a.CodEmpresa == codEmp);
+
+          if (agendamento is null || agendamento.IsDeleted)
+            return;
+
+          if (agendamento.Status == "cancelado")
+            return;
+
+          agendamento.Status = "finalizado";
+          agendamento.AlteradoEm = DateTime.UtcNow;
+          agendamento.AlteradoPorUsuarioId = usuarioId;
+        }
 
         // GET /atendimentos?profissionalId=&pacienteId=&de=&ate=&status=&page=&pageSize=&order=
         g.MapGet("/", async (ClaimsPrincipal u,
@@ -269,28 +294,36 @@ public static class AtendimentoEndpoints
         // POST /atendimentos/{id}/finalizar
         g.MapPost("/{id:guid}/finalizar", async (ClaimsPrincipal u, Guid id, SfaDbContext db) =>
         {
-            var codEmp = GetCodEmpresa(u);
+          var codEmp = GetCodEmpresa(u);
 
-            var entity = await db.Atendimentos.FirstOrDefaultAsync(a => a.Id == id && a.CodEmpresa == codEmp);
-            if (entity is null) return Results.NotFound();
+          var entity = await db.Atendimentos.FirstOrDefaultAsync(a => a.Id == id && a.CodEmpresa == codEmp);
+          if (entity is null) return Results.NotFound();
 
-            // Profissional só pode finalizar se for dele
-            if (IsProfissionalOnly(u))
-            {
-                var uid = GetUserId(u) ?? Guid.Empty;
-                if (entity.ProfissionalId != uid) return Results.Forbid();
-            }
+          // Profissional só pode finalizar se for dele
+          if (IsProfissionalOnly(u))
+          {
+            var uid = GetUserId(u) ?? Guid.Empty;
+            if (entity.ProfissionalId != uid) return Results.Forbid();
+          }
 
-            if (entity.Status != AtendimentoStatus.Aberto)
-                return Results.Conflict(new { message = "somente_aberto_pode_finalizar" });
+          if (entity.Status != AtendimentoStatus.Aberto)
+            return Results.Conflict(new { message = "somente_aberto_pode_finalizar" });
 
-            entity.Status = AtendimentoStatus.Finalizado;
-            entity.FinalizadoUtc = DateTimeOffset.UtcNow;
-            entity.AlteradoPorUsuarioId = GetUserId(u);
-            entity.AlteradoEm = DateTime.UtcNow;
+          var usuarioId = GetUserId(u);
 
-            await db.SaveChangesAsync();
-            return Results.NoContent();
+          entity.Status = AtendimentoStatus.Finalizado;
+          entity.FinalizadoUtc = DateTimeOffset.UtcNow;
+          entity.AlteradoPorUsuarioId = usuarioId;
+          entity.AlteradoEm = DateTime.UtcNow;
+
+          await FinalizarAgendamentoRelacionadoAsync(
+            db,
+            codEmp,
+            entity.AgendamentoId,
+            usuarioId);
+
+          await db.SaveChangesAsync();
+          return Results.NoContent();
         });
 
         // POST /atendimentos/{id}/cancelar
