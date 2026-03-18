@@ -12,7 +12,9 @@
     <ProjectReference Include="..\SFA.Infrastructure\SFA.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.25" />
     <PackageReference Include="AWSSDK.RDS" Version="4.0.13" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.19" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.4">

@@ -24,7 +24,8 @@
         { "name": "Smtp__FromEmail", "value": "devmatheusoxs@gmail.com" },
         { "name": "Smtp__FromName", "value": "MedlyCare" },
         { "name": "Smtp__EnableSsl", "value": "true" },
-        { "name": "Smtp__ResetBaseUrl", "value": "https://staging.medlycare.local/redefinir-senha" }
+        { "name": "Smtp__ResetBaseUrl", "value": "https://staging.medlycare.local/redefinir-senha" },
+        { "name": "AWS__Region", "value": "sa-east-1" }
       ],
       "secrets": [
         { "name": "Jwt__Secret",   "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:Jwt__Secret::" },
@@ -36,7 +37,9 @@
         { "name": "DB_NAME", "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:dbname::" },
 
         { "name": "Smtp__User", "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:Smtp__User::" },
-        { "name": "Smtp__Password", "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:Smtp__Password::" }
+        { "name": "Smtp__Password", "valueFrom": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:Smtp__Password::" },
+        
+        { "name": "AWS__S3__BucketName", "value": "arn:aws:secretsmanager:sa-east-1:395359594148:secret:sfa/staging/appsettings:AWS__S3__BucketName::" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",

@@ -15,6 +15,9 @@ using SFA.Api.Middlewares;
 using Amazon.RDS.Util;
 using Amazon.Runtime.Credentials;
 using Serilog.Events;
+using Amazon.S3;
+using SFA.Api.Storage;
+using SFA.Application.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -221,6 +224,14 @@ builder.Services.AddValidatorsFromAssembly(
 
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Smtp"));
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+
+builder.Services.Configure<S3Options>(
+  builder.Configuration.GetSection(S3Options.SectionName));
+
+builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
+builder.Services.AddAWSService<IAmazonS3>();
+
+builder.Services.AddScoped<IFileStorageService, S3FileStorageService>();
 
 var app = builder.Build();
 
