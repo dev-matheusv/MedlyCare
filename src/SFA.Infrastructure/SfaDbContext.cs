@@ -15,7 +15,8 @@ public class SfaDbContext(DbContextOptions<SfaDbContext> options) : DbContext(op
   public DbSet<Atendimento> Atendimentos => Set<Atendimento>();
   public DbSet<ConfirmacaoAgendamento> ConfirmacoesAgendamento => Set<ConfirmacaoAgendamento>();
   public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
-
+  public DbSet<AnexoPaciente> AnexosPaciente => Set<AnexoPaciente>();
+  public DbSet<LogAcessoAnexoPaciente> LogsAcessoAnexoPaciente => Set<LogAcessoAnexoPaciente>();
 
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
