@@ -134,13 +134,29 @@ public static class EmpresaEndpoints
             var val = await v.ValidateAsync(dto);
             if (!val.IsValid) return Results.ValidationProblem(val.ToDictionary());
 
-            var documentoJaExiste = await db.Empresas.AnyAsync(x => x.Documento == dto.Documento);
-            if (documentoJaExiste)
-                return Results.Conflict(new { field = "documento", message = "documento já cadastrado" });
+            var documentoJaExiste = await db.Empresas.AnyAsync(x =>
+              EF.Functions.ILike(x.Documento, dto.Documento));
 
-            var emailJaExiste = await db.Empresas.AnyAsync(x => x.Email == dto.Email);
+            if (documentoJaExiste)
+              return Results.Conflict(new { field = "documento", message = "documento já cadastrado" });
+
+            var emailJaExiste = await db.Empresas.AnyAsync(x =>
+              EF.Functions.ILike(x.Email, dto.Email));
+
             if (emailJaExiste)
-                return Results.Conflict(new { field = "email", message = "email já cadastrado" });
+              return Results.Conflict(new { field = "email", message = "email já cadastrado" });
+
+            var loginAdminJaExisteGlobal = await db.Usuarios.AnyAsync(x =>
+              EF.Functions.ILike(x.Login, dto.LoginUsuarioAdmin));
+
+            if (loginAdminJaExisteGlobal)
+              return Results.Conflict(new { field = "loginUsuarioAdmin", message = "login do admin já está em uso" });
+
+            var emailAdminJaExisteGlobal = await db.Usuarios.AnyAsync(x =>
+              EF.Functions.ILike(x.Email, dto.EmailUsuarioAdmin));
+
+            if (emailAdminJaExisteGlobal)
+              return Results.Conflict(new { field = "emailUsuarioAdmin", message = "email do admin já está em uso" });
 
             await using var tx = await db.Database.BeginTransactionAsync();
 
@@ -171,20 +187,6 @@ public static class EmpresaEndpoints
 
                 db.Empresas.Add(empresa);
                 await db.SaveChangesAsync();
-
-                var loginAdminJaExiste = await db.Usuarios.AnyAsync(x =>
-                    x.CodEmpresa == empresa.CodEmpresa &&
-                    x.Login == dto.LoginUsuarioAdmin);
-
-                if (loginAdminJaExiste)
-                    return Results.Conflict(new { field = "loginUsuarioAdmin", message = "login do admin já existe nesta empresa" });
-
-                var emailAdminJaExiste = await db.Usuarios.AnyAsync(x =>
-                    x.CodEmpresa == empresa.CodEmpresa &&
-                    x.Email == dto.EmailUsuarioAdmin);
-
-                if (emailAdminJaExiste)
-                    return Results.Conflict(new { field = "emailUsuarioAdmin", message = "email do admin já existe nesta empresa" });
 
                 var perfilAdmin = await db.Perfis.FirstOrDefaultAsync(p =>
                     p.CodEmpresa == empresa.CodEmpresa &&
@@ -259,13 +261,19 @@ public static class EmpresaEndpoints
             var e = await db.Empresas.FirstOrDefaultAsync(x => x.Id == id);
             if (e is null) return Results.NotFound();
 
-            var documentoJaExiste = await db.Empresas.AnyAsync(x => x.Documento == dto.Documento && x.Id != id);
-            if (documentoJaExiste)
-                return Results.Conflict(new { field = "documento", message = "documento já cadastrado" });
+            var documentoJaExiste = await db.Empresas.AnyAsync(x =>
+              x.Id != id &&
+              EF.Functions.ILike(x.Documento, dto.Documento));
 
-            var emailJaExiste = await db.Empresas.AnyAsync(x => x.Email == dto.Email && x.Id != id);
+            if (documentoJaExiste)
+              return Results.Conflict(new { field = "documento", message = "documento já cadastrado" });
+
+            var emailJaExiste = await db.Empresas.AnyAsync(x =>
+              x.Id != id &&
+              EF.Functions.ILike(x.Email, dto.Email));
+
             if (emailJaExiste)
-                return Results.Conflict(new { field = "email", message = "email já cadastrado" });
+              return Results.Conflict(new { field = "email", message = "email já cadastrado" });
 
             e.RazaoSocial = dto.RazaoSocial;
             e.Documento = dto.Documento;

@@ -9,7 +9,22 @@ public static class DbInitializer
   {
     if (!await db.Empresas.AnyAsync())
     {
-      db.Empresas.Add(new Empresa { RazaoSocial = "Clínica SFA", Ativa = true });
+      db.Empresas.Add(new Empresa
+      {
+        RazaoSocial = "Clínica SFA",
+        Documento = "00000000000191",
+        Email = "contato@sfa.com",
+        Telefone = "11999999999",
+        Endereco = "Rua Exemplo",
+        NumeroImovel = 100,
+        Bairro = "Centro",
+        Cidade = "São Paulo",
+        Uf = "SP",
+        Cep = "00000-000",
+        ResponsavelClinica = "Administrador",
+        Ativa = true
+      });
+
       await db.SaveChangesAsync();
     }
 

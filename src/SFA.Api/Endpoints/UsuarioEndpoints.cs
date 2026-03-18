@@ -21,6 +21,25 @@ public static class UsuarioEndpoints
                 throw new InvalidOperationException("cod_empresa ausente no token.");
             return codEmp;
         }
+        
+        static async Task<bool> EhUnicoAdminAtivoAsync(SfaDbContext db, Guid usuarioId, int codEmp)
+        {
+          var isAdmin = await db.UsuariosPerfis
+            .AnyAsync(up => up.UsuarioId == usuarioId &&
+                            up.Usuario.CodEmpresa == codEmp &&
+                            up.Perfil.Nome == "Admin");
+
+          if (!isAdmin)
+            return false;
+
+          var totalAdminsAtivos = await db.UsuariosPerfis
+            .CountAsync(up =>
+              up.Usuario.CodEmpresa == codEmp &&
+              up.Usuario.Ativo &&
+              up.Perfil.Nome == "Admin");
+
+          return totalAdminsAtivos <= 1;
+        }
 
         g.MapGet("/", async (ClaimsPrincipal u, string? search, bool? ativo,
             SfaDbContext db, int page = 1, int pageSize = 20, string? order = null) =>
@@ -102,19 +121,25 @@ public static class UsuarioEndpoints
 
             await using var conn = (NpgsqlConnection)db.Database.GetDbConnection();
             if (conn.State != System.Data.ConnectionState.Open) await conn.OpenAsync();
+            
+            var loginExists = await db.Usuarios.AnyAsync(x =>
+              x.CodEmpresa == codEmp &&
+              EF.Functions.ILike(x.Login, dto.Login));
+
+            if (loginExists)
+              return Results.Conflict(new { field = "login", message = "login já existe nesta empresa" });
+
+            var emailExists = await db.Usuarios.AnyAsync(x =>
+              x.CodEmpresa == codEmp &&
+              EF.Functions.ILike(x.Email, dto.Email));
+
+            if (emailExists)
+              return Results.Conflict(new { field = "email", message = "email já existe nesta empresa" });
 
             await using var cmd = new NpgsqlCommand("SELECT crypt(@p, gen_salt('bf'))", conn);
             cmd.Parameters.AddWithValue("p", NpgsqlDbType.Text, dto.Password);
             var hashObj = await cmd.ExecuteScalarAsync();
             var hash = (hashObj as string) ?? throw new InvalidOperationException("Falha ao gerar hash de senha.");
-
-            var loginExists = await db.Usuarios.AnyAsync(x => x.CodEmpresa == codEmp && x.Login == dto.Login);
-            if (loginExists)
-                return Results.Conflict(new { field = "login", message = "login já existe nesta empresa" });
-
-            var emailExists = await db.Usuarios.AnyAsync(x => x.CodEmpresa == codEmp && x.Email == dto.Email);
-            if (emailExists)
-                return Results.Conflict(new { field = "email", message = "email já existe nesta empresa" });
 
             var entity = new Domain.Entities.Usuario
             {
@@ -144,26 +169,40 @@ public static class UsuarioEndpoints
             var entity = await db.Usuarios.FirstOrDefaultAsync(x => x.Id == id && x.CodEmpresa == codEmp);
             if (entity is null) return Results.NotFound();
 
-            var emailExists = await db.Usuarios.AnyAsync(x => x.CodEmpresa == codEmp && x.Email == dto.Email && x.Id != id);
-            if (emailExists)
+            if (!string.IsNullOrWhiteSpace(dto.Email))
+            {
+              var emailExists = await db.Usuarios.AnyAsync(x =>
+                x.Id != id &&
+                x.CodEmpresa == codEmp &&
+                EF.Functions.ILike(x.Email, dto.Email));
+
+              if (emailExists)
                 return Results.Conflict(new { field = "email", message = "email já existe nesta empresa" });
+            }
 
             entity.Nome = dto.Nome;
             entity.Email = dto.Email;
             entity.Telefone = dto.Telefone;
             entity.CelularWhatsapp = dto.CelularWhatsapp;
+            
+            if (!dto.Ativo && entity.Ativo)
+            {
+              var unicoAdminAtivo = await EhUnicoAdminAtivoAsync(db, entity.Id, codEmp);
+              if (unicoAdminAtivo)
+                return Results.Conflict(new { message = "não é possível inativar o único administrador ativo da empresa" });
+            }
             entity.Ativo = dto.Ativo;
 
             if (!string.IsNullOrWhiteSpace(dto.Password))
             {
-                await using var conn = (NpgsqlConnection)db.Database.GetDbConnection();
-                if (conn.State != System.Data.ConnectionState.Open) await conn.OpenAsync();
+              await using var conn = (NpgsqlConnection)db.Database.GetDbConnection();
+              if (conn.State != System.Data.ConnectionState.Open) await conn.OpenAsync();
 
-                await using var cmd = new NpgsqlCommand("SELECT crypt(@p, gen_salt('bf'))", conn);
-                cmd.Parameters.AddWithValue("p", NpgsqlDbType.Text, dto.Password);
-                var hashObj = await cmd.ExecuteScalarAsync();
+              await using var cmd = new NpgsqlCommand("SELECT crypt(@p, gen_salt('bf'))", conn);
+              cmd.Parameters.AddWithValue("p", NpgsqlDbType.Text, dto.Password);
+              var hashObj = await cmd.ExecuteScalarAsync();
 
-                entity.PasswordHash = (hashObj as string) ?? throw new InvalidOperationException("Falha ao gerar hash de senha.");
+              entity.PasswordHash = (hashObj as string) ?? throw new InvalidOperationException("Falha ao gerar hash de senha.");
             }
 
             await db.SaveChangesAsync();
@@ -187,6 +226,10 @@ public static class UsuarioEndpoints
             var entity = await db.Usuarios.FirstOrDefaultAsync(x => x.Id == id && x.CodEmpresa == codEmp);
             if (entity is null) return Results.NotFound();
 
+            var unicoAdminAtivo = await EhUnicoAdminAtivoAsync(db, entity.Id, codEmp);
+            if (unicoAdminAtivo)
+              return Results.Conflict(new { message = "não é possível inativar o único administrador ativo da empresa" });
+            
             entity.Ativo = false;
             await db.SaveChangesAsync();
             return Results.NoContent();
@@ -197,7 +240,11 @@ public static class UsuarioEndpoints
             var codEmp = GetCodEmpresa(u);
             var entity = await db.Usuarios.FirstOrDefaultAsync(x => x.Id == id && x.CodEmpresa == codEmp);
             if (entity is null) return Results.NotFound();
-
+            
+            var unicoAdminAtivo = await EhUnicoAdminAtivoAsync(db, entity.Id, codEmp);
+            if (unicoAdminAtivo)
+              return Results.Conflict(new { message = "não é possível excluir o único administrador ativo da empresa" });
+            
             db.Usuarios.Remove(entity);
             await db.SaveChangesAsync();
             return Results.NoContent();

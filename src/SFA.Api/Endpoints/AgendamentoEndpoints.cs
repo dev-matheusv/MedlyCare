@@ -44,6 +44,17 @@ public static class AgendamentoEndpoints
                 && a.FimUtc > inicio
             );
         }
+        
+        static async Task CancelarAtendimentoRelacionadoAsync(SfaDbContext db, int codEmp, Guid agendamentoId)
+        {
+          var atendimento = await db.Atendimentos
+            .FirstOrDefaultAsync(a => a.CodEmpresa == codEmp && a.AgendamentoId == agendamentoId);
+
+          if (atendimento is not null && atendimento.Status != AtendimentoStatus.Finalizado)
+          {
+            atendimento.Status = AtendimentoStatus.Cancelado;
+          }
+        }
 
         // GET /agendamentos?profissionalId=&pacienteId=&de=&ate=&status=&page=&pageSize=&order=
         g.MapGet("/", async (ClaimsPrincipal u, Guid? profissionalId, Guid? pacienteId, DateTimeOffset? de,
@@ -260,6 +271,9 @@ public static class AgendamentoEndpoints
             entity.Status = "cancelado";
             entity.AlteradoPorUsuarioId = GetUserId(u);
             entity.AlteradoEm = DateTime.UtcNow;
+
+            await CancelarAtendimentoRelacionadoAsync(db, codEmp, entity.Id);
+
             await db.SaveChangesAsync();
             return Results.NoContent();
         });
@@ -279,10 +293,16 @@ public static class AgendamentoEndpoints
                 if (entity.ProfissionalId != uid) return Results.Forbid();
             }
             
+            entity.Status = "cancelado";
+            entity.AlteradoPorUsuarioId = GetUserId(u);
+            entity.AlteradoEm = DateTime.UtcNow;
+
             entity.IsDeleted = true;
             entity.DeletedAt = DateTimeOffset.UtcNow;
             entity.DeletedBy = GetUserId(u);
             entity.DeletedReason = motivo;
+
+            await CancelarAtendimentoRelacionadoAsync(db, codEmp, entity.Id);
 
             await db.SaveChangesAsync();
             return Results.NoContent();
@@ -533,7 +553,7 @@ public static class AgendamentoEndpoints
             .IgnoreQueryFilters()
             .SingleOrDefaultAsync(a => a.Id == c.AgendamentoId && a.CodEmpresa == c.CodEmpresa);
 
-          if (ag is null)
+          if (ag is null || ag.IsDeleted)
             return Html("Agendamento não encontrado", "Esse agendamento não existe mais. Entre em contato com a recepção.");
 
           c.Status = ConfirmacaoAgendamentoStatus.Confirmado;
@@ -571,7 +591,7 @@ public static class AgendamentoEndpoints
             .IgnoreQueryFilters()
             .SingleOrDefaultAsync(a => a.Id == c.AgendamentoId && a.CodEmpresa == c.CodEmpresa);
 
-          if (ag is null)
+          if (ag is null || ag.IsDeleted)
             return Html("Agendamento não encontrado", "Esse agendamento não existe mais. Entre em contato com a recepção.");
 
           c.Status = ConfirmacaoAgendamentoStatus.Recusado;
@@ -583,6 +603,8 @@ public static class AgendamentoEndpoints
           ag.Status = "cancelado";
           ag.AlteradoEm = DateTime.UtcNow;
           ag.AlteradoPorUsuarioId = null;
+
+          await CancelarAtendimentoRelacionadoAsync(db, ag.CodEmpresa, ag.Id);
 
           await db.SaveChangesAsync();
           return Html("Ok", "Registramos que você não poderá comparecer. Obrigado!");
