@@ -115,49 +115,53 @@ public static class AuthEndpoints
                 u.Ativo &&
                 EF.Functions.ILike(u.Email, email));
 
-            if (user is not null)
+            if (user is null)
+              return Results.Ok(new
+              {
+                message = "Se existir um usuário compatível, um e-mail será enviado."
+              });
+            
+            var agora = DateTime.UtcNow;
+
+            var tokensAtivos = await db.PasswordResetTokens
+              .Where(x => x.UsuarioId == user.Id && x.UsadoEm == null && x.ExpiraEm > agora)
+              .ToListAsync();
+
+            foreach (var item in tokensAtivos)
+              item.UsadoEm = agora;
+
+            var token = Guid.NewGuid().ToString("N");
+            var tokenHash = TokenHasher.Hash(token);
+
+            db.PasswordResetTokens.Add(new PasswordResetToken
             {
-                var agora = DateTime.UtcNow;
+              UsuarioId = user.Id,
+              TokenHash = tokenHash,
+              ExpiraEm = agora.AddHours(1)
+            });
 
-                var tokensAtivos = await db.PasswordResetTokens
-                    .Where(x => x.UsuarioId == user.Id && x.UsadoEm == null && x.ExpiraEm > agora)
-                    .ToListAsync();
+            await db.SaveChangesAsync();
 
-                foreach (var item in tokensAtivos)
-                    item.UsadoEm = agora;
+            var link = $"{smtp.ResetBaseUrl.TrimEnd('/')}?token={Uri.EscapeDataString(token)}";
 
-                var token = Guid.NewGuid().ToString("N");
+            var html = $"""
+                        <p>Olá, {user.Nome}.</p>
+                        <p>Recebemos uma solicitação de recuperação de senha.</p>
+                        <p>Clique no link abaixo para redefinir:</p>
+                        <p><a href="{link}">{link}</a></p>
+                        <p>Este link expira em 1 hora.</p>
+                        """;
 
-                db.PasswordResetTokens.Add(new PasswordResetToken
-                {
-                    UsuarioId = user.Id,
-                    TokenHash = token,
-                    ExpiraEm = agora.AddHours(1)
-                });
-
-                await db.SaveChangesAsync();
-
-                var link = $"{smtp.ResetBaseUrl.TrimEnd('/')}?token={Uri.EscapeDataString(token)}";
-
-                var html = $"""
-                    <p>Olá, {user.Nome}.</p>
-                    <p>Recebemos uma solicitação de recuperação de senha.</p>
-                    <p>Clique no link abaixo para redefinir:</p>
-                    <p><a href="{link}">{link}</a></p>
-                    <p>Este link expira em 1 hora.</p>
-                    """;
-
-                try
-                {
-                    await emailService.SendAsync(
-                        user.Email,
-                        "Recuperação de acesso - MedlyCare",
-                        html);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "Erro ao enviar e-mail de recuperação de acesso.");
-                }
+            try
+            {
+              await emailService.SendAsync(
+                user.Email,
+                "Recuperação de acesso - MedlyCare",
+                html);
+            }
+            catch (Exception ex)
+            {
+              Log.Error(ex, "Erro ao enviar e-mail de recuperação de acesso.");
             }
 
             return Results.Ok(new
@@ -168,47 +172,50 @@ public static class AuthEndpoints
 
         group.MapPost("/redefinir-senha", async (RedefinirSenhaRequest req, SfaDbContext db) =>
         {
-            if (string.IsNullOrWhiteSpace(req.Token) || string.IsNullOrWhiteSpace(req.NovaSenha))
-                return Results.BadRequest(new { message = "token_novaSenha_obrigatorios" });
+          var tokenValue = req.Token.Trim();
+          var novaSenha = req.NovaSenha.Trim();
 
-            var tokenHash = TokenHasher.Hash(req.Token);
+          if (string.IsNullOrWhiteSpace(tokenValue) || string.IsNullOrWhiteSpace(novaSenha))
+            return Results.BadRequest(new { message = "token_novaSenha_obrigatorios" });
 
-            var token = await db.PasswordResetTokens
-              .Include(x => x.Usuario)
-              .FirstOrDefaultAsync(x => x.TokenHash == tokenHash);
+          var tokenHash = TokenHasher.Hash(tokenValue);
 
-            if (token is null)
-                return Results.BadRequest(new { message = "token_invalido" });
+          var token = await db.PasswordResetTokens
+            .Include(x => x.Usuario)
+            .FirstOrDefaultAsync(x => x.TokenHash == tokenHash);
 
-            if (token.UsadoEm.HasValue)
-                return Results.BadRequest(new { message = "token_ja_utilizado" });
+          if (token is null)
+            return Results.BadRequest(new { message = "token_invalido" });
 
-            if (token.ExpiraEm < DateTime.UtcNow)
-                return Results.BadRequest(new { message = "token_expirado" });
+          if (token.UsadoEm.HasValue)
+            return Results.BadRequest(new { message = "token_ja_utilizado" });
 
-            await using var conn = (NpgsqlConnection)db.Database.GetDbConnection();
-            if (conn.State != System.Data.ConnectionState.Open)
-                await conn.OpenAsync();
+          if (token.ExpiraEm < DateTime.UtcNow)
+            return Results.BadRequest(new { message = "token_expirado" });
 
-            await using var cmd = new NpgsqlCommand("SELECT crypt(@p, gen_salt('bf'))", conn);
-            cmd.Parameters.AddWithValue("p", NpgsqlDbType.Text, req.NovaSenha);
+          await using var conn = (NpgsqlConnection)db.Database.GetDbConnection();
+          if (conn.State != System.Data.ConnectionState.Open)
+            await conn.OpenAsync();
 
-            var hashObj = await cmd.ExecuteScalarAsync();
-            var hash = (hashObj as string) ?? throw new InvalidOperationException("Falha ao gerar hash de senha.");
+          await using var cmd = new NpgsqlCommand("SELECT crypt(@p, gen_salt('bf'))", conn);
+          cmd.Parameters.AddWithValue("p", NpgsqlDbType.Text, novaSenha);
 
-            token.Usuario.PasswordHash = hash;
-            token.UsadoEm = DateTime.UtcNow;
+          var hashObj = await cmd.ExecuteScalarAsync();
+          var hash = (hashObj as string) ?? throw new InvalidOperationException("Falha ao gerar hash de senha.");
 
-            var outrosTokens = await db.PasswordResetTokens
-                .Where(x => x.UsuarioId == token.UsuarioId && x.Id != token.Id && x.UsadoEm == null)
-                .ToListAsync();
+          token.Usuario.PasswordHash = hash;
+          token.UsadoEm = DateTime.UtcNow;
 
-            foreach (var item in outrosTokens)
-                item.UsadoEm = DateTime.UtcNow;
+          var outrosTokens = await db.PasswordResetTokens
+            .Where(x => x.UsuarioId == token.UsuarioId && x.Id != token.Id && x.UsadoEm == null)
+            .ToListAsync();
 
-            await db.SaveChangesAsync();
+          foreach (var item in outrosTokens)
+            item.UsadoEm = DateTime.UtcNow;
 
-            return Results.Ok(new { message = "senha_redefinida_com_sucesso" });
+          await db.SaveChangesAsync();
+
+          return Results.Ok(new { message = "senha_redefinida_com_sucesso" });
         })
         .WithSummary("Redefine a senha usando token de recuperação")
         .Produces(StatusCodes.Status200OK)
