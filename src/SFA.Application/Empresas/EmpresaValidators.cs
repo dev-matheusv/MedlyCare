@@ -23,6 +23,18 @@ public class EmpresaCreateValidator : AbstractValidator<EmpresaCreateDto>
         RuleFor(x => x.PathLogotipo).MaximumLength(500);
         RuleFor(x => x.Cnae).MaximumLength(20);
         RuleFor(x => x.RedesSociais).MaximumLength(500);
+        
+        RuleFor(x => x.NomeUsuarioAdmin).NotEmpty().MaximumLength(120);
+        RuleFor(x => x.LoginUsuarioAdmin).NotEmpty().MaximumLength(120);
+        RuleFor(x => x.EmailUsuarioAdmin).NotEmpty().EmailAddress().MaximumLength(200);
+        RuleFor(x => x.TelefoneUsuarioAdmin).MaximumLength(20);
+        RuleFor(x => x.CelularWhatsappUsuarioAdmin).MaximumLength(20);
+        RuleFor(x => x.SenhaUsuarioAdmin).NotEmpty().MinimumLength(6).MaximumLength(200);
+        
+        RuleFor(x => x.LoginUsuarioAdmin)
+          .Must(x => !string.IsNullOrWhiteSpace(x))
+          .WithMessage("Login do usuário admin é obrigatório.")
+          .MaximumLength(120);
     }
 }
 

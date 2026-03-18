@@ -19,6 +19,14 @@ public record EmpresaCreateDto(
   string? PathLogotipo,
   string? Cnae,
   string? RedesSociais,
+
+  string NomeUsuarioAdmin,
+  string LoginUsuarioAdmin,
+  string EmailUsuarioAdmin,
+  string? TelefoneUsuarioAdmin,
+  string? CelularWhatsappUsuarioAdmin,
+  string SenhaUsuarioAdmin,
+
   bool Ativa = true
 );
 

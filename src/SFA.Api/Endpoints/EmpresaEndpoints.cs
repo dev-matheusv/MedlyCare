@@ -1,5 +1,7 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using NpgsqlTypes;
 using SFA.Application.Empresas;
 using SFA.Infrastructure;
 
@@ -140,33 +142,113 @@ public static class EmpresaEndpoints
             if (emailJaExiste)
                 return Results.Conflict(new { field = "email", message = "email já cadastrado" });
 
-            var entity = new Domain.Entities.Empresa
+            await using var tx = await db.Database.BeginTransactionAsync();
+
+            try
             {
-                RazaoSocial = dto.RazaoSocial,
-                Documento = dto.Documento,
-                InscricaoEstadualRg = dto.InscricaoEstadualRg,
-                Email = dto.Email,
-                Telefone = dto.Telefone,
-                CelularWhatsapp = dto.CelularWhatsapp,
-                UtilizarCelularParaEnvioMensagens = dto.UtilizarCelularParaEnvioMensagens,
-                Endereco = dto.Endereco,
-                NumeroImovel = dto.NumeroImovel,
-                Bairro = dto.Bairro,
-                Cidade = dto.Cidade,
-                Uf = dto.Uf,
-                Cep = dto.Cep,
-                Pais = dto.Pais,
-                ResponsavelClinica = dto.ResponsavelClinica,
-                PathLogotipo = dto.PathLogotipo,
-                Cnae = dto.Cnae,
-                RedesSociais = dto.RedesSociais,
-                Ativa = dto.Ativa
-            };
+                var empresa = new Domain.Entities.Empresa
+                {
+                    RazaoSocial = dto.RazaoSocial,
+                    Documento = dto.Documento,
+                    InscricaoEstadualRg = dto.InscricaoEstadualRg,
+                    Email = dto.Email,
+                    Telefone = dto.Telefone,
+                    CelularWhatsapp = dto.CelularWhatsapp,
+                    UtilizarCelularParaEnvioMensagens = dto.UtilizarCelularParaEnvioMensagens,
+                    Endereco = dto.Endereco,
+                    NumeroImovel = dto.NumeroImovel,
+                    Bairro = dto.Bairro,
+                    Cidade = dto.Cidade,
+                    Uf = dto.Uf,
+                    Cep = dto.Cep,
+                    Pais = dto.Pais,
+                    ResponsavelClinica = dto.ResponsavelClinica,
+                    PathLogotipo = dto.PathLogotipo,
+                    Cnae = dto.Cnae,
+                    RedesSociais = dto.RedesSociais,
+                    Ativa = dto.Ativa
+                };
 
-            db.Empresas.Add(entity);
-            await db.SaveChangesAsync();
+                db.Empresas.Add(empresa);
+                await db.SaveChangesAsync();
 
-            return Results.Created($"/api/v1/empresas/{entity.Id}", new { entity.Id, entity.CodEmpresa });
+                var loginAdminJaExiste = await db.Usuarios.AnyAsync(x =>
+                    x.CodEmpresa == empresa.CodEmpresa &&
+                    x.Login == dto.LoginUsuarioAdmin);
+
+                if (loginAdminJaExiste)
+                    return Results.Conflict(new { field = "loginUsuarioAdmin", message = "login do admin já existe nesta empresa" });
+
+                var emailAdminJaExiste = await db.Usuarios.AnyAsync(x =>
+                    x.CodEmpresa == empresa.CodEmpresa &&
+                    x.Email == dto.EmailUsuarioAdmin);
+
+                if (emailAdminJaExiste)
+                    return Results.Conflict(new { field = "emailUsuarioAdmin", message = "email do admin já existe nesta empresa" });
+
+                var perfilAdmin = await db.Perfis.FirstOrDefaultAsync(p =>
+                    p.CodEmpresa == empresa.CodEmpresa &&
+                    p.Nome == "Admin");
+
+                if (perfilAdmin is null)
+                {
+                    perfilAdmin = new Domain.Entities.Perfil
+                    {
+                        CodEmpresa = empresa.CodEmpresa,
+                        Nome = "Admin",
+                        Ativo = true,
+                        CriadoEm = DateTime.UtcNow
+                    };
+
+                    db.Perfis.Add(perfilAdmin);
+                    await db.SaveChangesAsync();
+                }
+
+                await using var conn = (NpgsqlConnection)db.Database.GetDbConnection();
+                if (conn.State != System.Data.ConnectionState.Open)
+                    await conn.OpenAsync();
+
+                await using var cmd = new NpgsqlCommand("SELECT crypt(@p, gen_salt('bf'))", conn);
+                cmd.Parameters.AddWithValue("p", NpgsqlDbType.Text, dto.SenhaUsuarioAdmin);
+                var hashObj = await cmd.ExecuteScalarAsync();
+                var hash = (hashObj as string) ?? throw new InvalidOperationException("Falha ao gerar hash de senha.");
+
+                var usuarioAdmin = new Domain.Entities.Usuario
+                {
+                    CodEmpresa = empresa.CodEmpresa,
+                    Login = dto.LoginUsuarioAdmin,
+                    Nome = dto.NomeUsuarioAdmin,
+                    Email = dto.EmailUsuarioAdmin,
+                    Telefone = dto.TelefoneUsuarioAdmin,
+                    CelularWhatsapp = dto.CelularWhatsappUsuarioAdmin,
+                    PasswordHash = hash,
+                    Ativo = true
+                };
+
+                db.Usuarios.Add(usuarioAdmin);
+                await db.SaveChangesAsync();
+
+                db.UsuariosPerfis.Add(new Domain.Entities.UsuarioPerfil
+                {
+                    UsuarioId = usuarioAdmin.Id,
+                    PerfilId = perfilAdmin.Id
+                });
+
+                await db.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                return Results.Created($"/api/v1/empresas/{empresa.Id}", new
+                {
+                    empresa.Id,
+                    empresa.CodEmpresa,
+                    UsuarioAdminId = usuarioAdmin.Id
+                });
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
         });
 
         g.MapPut("/{id:guid}", async (Guid id, EmpresaUpdateDto dto, IValidator<EmpresaUpdateDto> v, SfaDbContext db) =>
