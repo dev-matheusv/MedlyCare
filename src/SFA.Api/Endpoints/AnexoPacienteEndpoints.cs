@@ -197,111 +197,112 @@ public static class AnexoPacienteEndpoints
         });
 
         g.MapPost("/", async Task<IResult> (
-            ClaimsPrincipal user,
-            Guid pacienteId,
-            IFormFile? file,
-            [FromForm] int tipoDocumento,
-            [FromForm] string? descricao,
-            [FromForm] DateTime? dataDocumento,
-            IValidator<AnexoPacienteUploadDto> validator,
-            SfaDbContext db,
-            IFileStorageService storage,
-            CancellationToken cancellationToken) =>
+    ClaimsPrincipal user,
+    Guid pacienteId,
+    IFormFile? file,
+    [FromForm] int tipoDocumento,
+    [FromForm] string? descricao,
+    [FromForm] DateTime? dataDocumento,
+    IValidator<AnexoPacienteUploadDto> validator,
+    SfaDbContext db,
+    IFileStorageService storage,
+    CancellationToken cancellationToken) =>
+{
+    var codEmp = GetCodEmpresa(user);
+    var usuarioId = GetUserId(user);
+
+    var pacienteExiste = await PacienteExisteAsync(db, codEmp, pacienteId);
+    if (!pacienteExiste)
+        return Results.NotFound();
+
+    if (file is null || file.Length == 0)
+    {
+        return Results.BadRequest(new
         {
-            var codEmp = GetCodEmpresa(user);
-            var usuarioId = GetUserId(user);
-
-            var pacienteExiste = await PacienteExisteAsync(db, codEmp, pacienteId);
-            if (!pacienteExiste)
-                return Results.NotFound();
-
-            if (file is null || file.Length == 0)
-            {
-                return Results.BadRequest(new
-                {
-                    message = "arquivo_obrigatorio"
-                });
-            }
-
-            if (!TamanhoArquivoPermitido(file.Length))
-            {
-                return Results.BadRequest(new
-                {
-                    message = "tamanho_arquivo_nao_permitido"
-                });
-            }
-
-            if (!ContentTypePermitido(file.ContentType))
-            {
-                return Results.BadRequest(new
-                {
-                    message = "content_type_nao_permitido"
-                });
-            }
-
-            var dto = new AnexoPacienteUploadDto(
-                tipoDocumento,
-                descricao,
-                dataDocumento
-            );
-
-            var validation = await validator.ValidateAsync(dto, cancellationToken);
-            if (!validation.IsValid)
-                return Results.ValidationProblem(validation.ToDictionary());
-
-            await using var stream = file.OpenReadStream();
-
-            var hashSha256 = await CalcularSha256Async(stream, cancellationToken);
-            var nomeArmazenado = GerarNomeArmazenado(file.FileName);
-            var storageKey = MontarStorageKey(codEmp, pacienteId, nomeArmazenado);
-
-            try
-            {
-                await storage.UploadAsync(storageKey, stream, file.ContentType, cancellationToken);
-
-                var entity = new AnexoPaciente
-                {
-                    CodEmpresa = codEmp,
-                    PacienteId = pacienteId,
-                    TipoDocumento = (TipoDocumentoPaciente)dto.TipoDocumento,
-                    NomeArquivo = file.FileName,
-                    NomeArmazenado = nomeArmazenado,
-                    ContentType = file.ContentType,
-                    TamanhoBytes = file.Length,
-                    HashSha256 = hashSha256,
-                    UrlStorage = storageKey,
-                    Descricao = dto.Descricao,
-                    DataDocumento = dto.DataDocumento,
-                    EnviadoPorId = usuarioId,
-                    CriadoEm = DateTime.UtcNow,
-                    AtualizadoEm = DateTime.UtcNow,
-                    IsDeleted = false
-                };
-
-                db.AnexosPaciente.Add(entity);
-                await db.SaveChangesAsync(cancellationToken);
-
-                return Results.Created($"/api/v1/pacientes/{pacienteId}/anexos/{entity.Id}", new
-                {
-                    entity.Id,
-                    entity.PacienteId,
-                    entity.NomeArquivo
-                });
-            }
-            catch
-            {
-                try
-                {
-                    await storage.DeleteAsync(storageKey, cancellationToken);
-                }
-                catch
-                {
-                  // ignored
-                }
-
-                throw;
-            }
+            message = "arquivo_obrigatorio"
         });
+    }
+
+    if (!TamanhoArquivoPermitido(file.Length))
+    {
+        return Results.BadRequest(new
+        {
+            message = "tamanho_arquivo_nao_permitido"
+        });
+    }
+
+    if (!ContentTypePermitido(file.ContentType))
+    {
+        return Results.BadRequest(new
+        {
+            message = "content_type_nao_permitido"
+        });
+    }
+
+    var dto = new AnexoPacienteUploadDto(
+        tipoDocumento,
+        descricao,
+        dataDocumento
+    );
+
+    var validation = await validator.ValidateAsync(dto, cancellationToken);
+    if (!validation.IsValid)
+        return Results.ValidationProblem(validation.ToDictionary());
+
+    await using var stream = file.OpenReadStream();
+
+    var hashSha256 = await CalcularSha256Async(stream, cancellationToken);
+    var nomeArmazenado = GerarNomeArmazenado(file.FileName);
+    var storageKey = MontarStorageKey(codEmp, pacienteId, nomeArmazenado);
+
+    try
+    {
+        await storage.UploadAsync(storageKey, stream, file.ContentType, cancellationToken);
+
+        var entity = new AnexoPaciente
+        {
+            CodEmpresa = codEmp,
+            PacienteId = pacienteId,
+            TipoDocumento = (TipoDocumentoPaciente)dto.TipoDocumento,
+            NomeArquivo = file.FileName,
+            NomeArmazenado = nomeArmazenado,
+            ContentType = file.ContentType,
+            TamanhoBytes = file.Length,
+            HashSha256 = hashSha256,
+            UrlStorage = storageKey,
+            Descricao = dto.Descricao,
+            DataDocumento = dto.DataDocumento,
+            EnviadoPorId = usuarioId,
+            CriadoEm = DateTime.UtcNow,
+            AtualizadoEm = DateTime.UtcNow,
+            IsDeleted = false
+        };
+
+        db.AnexosPaciente.Add(entity);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Created($"/api/v1/pacientes/{pacienteId}/anexos/{entity.Id}", new
+        {
+            entity.Id,
+            entity.PacienteId,
+            entity.NomeArquivo
+        });
+    }
+    catch
+    {
+        try
+        {
+            await storage.DeleteAsync(storageKey, cancellationToken);
+        }
+        catch
+        {
+          // ignored
+        }
+
+        throw;
+    }
+})
+.DisableAntiforgery();
 
         g.MapGet("/{id:guid}/download", async (
             ClaimsPrincipal user,
