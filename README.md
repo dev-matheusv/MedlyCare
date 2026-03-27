@@ -1,118 +1,148 @@
-# 🏥 SFA Backend – Sistema de Clínicas
+# 🏥 MedlyCare Backend – Clinic Management System
 
-[![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?style=flat&logo=dotnet)](https://dotnet.microsoft.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat&logo=postgresql)](https://www.postgresql.org/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker)](https://www.docker.com/)
+[![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?style=flat\&logo=dotnet)](https://dotnet.microsoft.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat\&logo=postgresql)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat\&logo=docker)](https://www.docker.com/)
+[![AWS](https://img.shields.io/badge/AWS-ECS%20%7C%20RDS%20%7C%20ECR-FF9900?style=flat\&logo=amazonaws)](https://aws.amazon.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-> Backend do **Sistema SFA (Sistema de Clínicas)**, reescrito em **.NET 8** com **PostgreSQL**, utilizando **Clean Architecture** e suporte **multi-clínicas**.
+> Backend of **MedlyCare**, a clinic management system built with **.NET 8**, **PostgreSQL**, **Clean Architecture** and deployed on **AWS**.
 
 ---
 
-## 📌 Visão Geral
+## 📌 Overview
 
-Este projeto é a nova versão do **SFA Backend**, originalmente em Delphi, agora modernizado em **.NET 8** e **Vue.js** (frontend separado).  
-Focado em **segurança, escalabilidade e boas práticas**, traz:
+MedlyCare is a backend system designed to manage clinics, patients, appointments and healthcare workflows.
 
-- Multi-empresa (**clínicas**) com isolamento de dados.  
-- **Autenticação segura**: `pgcrypto` (bcrypt no PostgreSQL) + JWT.  
-- RBAC: controle de acesso baseado em perfis (admin, profissional, recepção).  
-- Gestão de **usuários, pacientes, atendimentos e status**.  
-- **Auditoria automática** em todas as tabelas críticas (old/new em JSON).  
-- Observabilidade: **Serilog + OpenTelemetry**.  
-- Deploy e dev com **Docker Compose**.
+This project is a modern evolution of a legacy system originally built in Delphi, now restructured using modern backend practices.
 
-> ℹ️ Nota: Este repositório está aberto temporariamente para portfólio.  
-> O projeto segue em evolução e poderá ser privado futuramente.
+### Key highlights
 
----
+* Multi-tenant system (**clinic/company isolation**)
+* Secure authentication with **bcrypt (pgcrypto) + JWT**
+* Role-based access control (**RBAC**)
+* Audit logging with **JSON (old/new values)**
+* Observability with **Serilog + OpenTelemetry**
+* Cloud-ready deployment using **Docker + AWS**
 
-## 🛠️ Tecnologias
-
-- [ASP.NET Core 8](https://learn.microsoft.com/aspnet/core) – API REST
-- [Entity Framework Core 8](https://learn.microsoft.com/ef/core) – ORM
-- [PostgreSQL 16](https://www.postgresql.org/) – Banco relacional
-- [pgcrypto](https://www.postgresql.org/docs/current/pgcrypto.html) – Hash de senhas
-- [Serilog](https://serilog.net/) – Logging estruturado
-- [OpenTelemetry](https://opentelemetry.io/) – Tracing e métricas
-- [Docker Compose](https://docs.docker.com/compose/) – Infra local (Postgres + pgAdmin)
-- [MediatR](https://github.com/jbogard/MediatR) – CQRS leve
-- [FluentValidation](https://fluentvalidation.net/) – Validações
+> ℹ️ Note: This repository contains only the backend API.
 
 ---
 
-## ⚙️ Setup do Projeto
+## 🛠️ Tech Stack
 
-### 1. Subir banco de dados
+* ASP.NET Core 8 (REST API)
+* Entity Framework Core 8
+* PostgreSQL 16
+* pgcrypto (password hashing)
+* Serilog (structured logging)
+* OpenTelemetry (tracing & metrics)
+* MediatR (CQRS pattern)
+* FluentValidation
+* Docker Compose
+
+---
+
+## ☁️ Cloud & Infrastructure
+
+The application is designed to run in AWS environments:
+
+* ECS (container orchestration)
+* RDS (PostgreSQL database)
+* ECR (container registry)
+
+---
+
+## ⚙️ Setup & Running Locally
+
+### 1. Start database (PostgreSQL + pgAdmin)
+
 ```bash
 docker compose up -d
 ```
 
-### 2. Rodar aplicação
+### 2. Run the application
+
 ```bash
 dotnet restore
 dotnet build
 dotnet run --project src/SFA.Api/SFA.Api.csproj
 ```
 
-Acesse o **Swagger** em: [http://localhost:5041/swagger](http://localhost:5041/swagger)
+### 3. Access Swagger
 
-### 3. Migrations (primeira vez)
-```bash
-dotnet tool install --global dotnet-ef
-dotnet ef migrations add InitialCreate -p src/SFA.Infrastructure/SFA.Infrastructure.csproj -s src/SFA.Api/SFA.Api.csproj
-dotnet ef database update -p src/SFA.Infrastructure/SFA.Infrastructure.csproj -s src/SFA.Api/SFA.Api.csproj
+```
+http://localhost:5041/swagger
 ```
 
 ---
 
-## 📂 Estrutura da Solução
+## 🧪 Migrations (first time)
+
+```bash
+dotnet tool install --global dotnet-ef
+
+dotnet ef migrations add InitialCreate \
+-p src/SFA.Infrastructure/SFA.Infrastructure.csproj \
+-s src/SFA.Api/SFA.Api.csproj
+
+dotnet ef database update \
+-p src/SFA.Infrastructure/SFA.Infrastructure.csproj \
+-s src/SFA.Api/SFA.Api.csproj
+```
+
+---
+
+## 📂 Project Structure
 
 ```
 src/
  ├── SFA.Api/              → ASP.NET Core (Swagger, JWT, Serilog)
- ├── SFA.Application/      → Casos de uso, validações, CQRS (MediatR)
- ├── SFA.Domain/           → Entidades, agregados e enums
- └── SFA.Infrastructure/   → EF Core, DbContext, migrations, repositórios
+ ├── SFA.Application/      → Use cases, validations, CQRS
+ ├── SFA.Domain/           → Entities and business rules
+ └── SFA.Infrastructure/   → EF Core, DbContext, migrations
 
-scripts/sql/               → Scripts do PostgreSQL (extensões, auditoria)
-docker-compose.yml         → Postgres + pgAdmin
+scripts/sql/               → PostgreSQL scripts (extensions, auditing)
+docker-compose.yml         → Local infrastructure
 ```
 
 ---
 
-## 🔒 Segurança
+## 🔒 Security
 
-- **Autenticação**: login + senha (bcrypt via `pgcrypto`).  
-- **Autorização**: RBAC baseado em perfis.  
-- **Auditoria**: triggers automáticas salvam operações (INSERT/UPDATE/DELETE) com usuário, empresa, txid, valores old/new.  
-- **Multi-empresa**: `cod_empresa` em todas as tabelas + suporte a **Row-Level Security (RLS)**.
-
----
-
-## 📊 Roadmap Backend (MVP)
-
-- ✅ **Semana 1**: Setup, Docker, Migrations iniciais  
-- ✅ **Semana 2**: Auth (pgcrypto + JWT + RBAC)  
-- 🚧 **Semana 3**: CRUD Empresas/Perfis  
-- 🚧 **Semana 4**: CRUD Pacientes + Anexos  
-- 🚧 **Semana 5**: Atendimentos e Status  
-- 🚧 **Semana 6**: Relatórios (sintético/detalhado)  
-- 🚧 **Semana 7**: Auditoria completa (JSON old/new)  
-- 🚧 **Semana 8**: Testes E2E, CI/CD e deploy
+* Authentication with bcrypt (`pgcrypto`)
+* JWT-based authorization
+* Role-based access control (RBAC)
+* Multi-tenant isolation (`cod_empresa`)
+* Optional Row-Level Security (RLS)
+* Full audit logging with JSON (old/new values)
 
 ---
 
-## 🤝 Contribuição
+## 📊 Roadmap (Backend MVP)
 
-1. Faça um fork do projeto  
-2. Crie uma branch para sua feature (`git checkout -b feature/minha-feature`)  
-3. Commit suas mudanças (`git commit -m "feat: adicionei minha feature"`)  
-4. Faça push para a branch (`git push origin feature/minha-feature`)  
-5. Abra um Pull Request  
+* ✅ Initial setup (Docker, migrations, base structure)
+* ✅ Authentication (JWT + RBAC)
+* ✅ Clinics and roles management
+* ✅ Patients and attachments
+* ✅ Appointments and workflows
+* 🚧 Reporting (summary & detailed)
+* 🚧 Full audit system
+* 🚧 Testing, CI/CD and production deployment
 
 ---
 
-## 📄 Licença
+## 🧠 What this project demonstrates
 
-Este projeto está sob licença MIT – veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+* Clean Architecture in real-world application
+* Multi-tenant backend design
+* Secure authentication and authorization
+* Relational database modeling
+* Cloud-ready infrastructure
+* Observability and logging
+
+---
+
+## 📄 License
+
+This project is licensed under MIT – see [LICENSE](LICENSE) for details.
