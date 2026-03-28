@@ -24,12 +24,13 @@ public static class UsuarioEndpoints
         
         static async Task<bool> EhUnicoAdminAtivoAsync(SfaDbContext db, Guid usuarioId, int codEmp)
         {
-          var isAdmin = await db.UsuariosPerfis
+          var isAdminAtivo = await db.UsuariosPerfis
             .AnyAsync(up => up.UsuarioId == usuarioId &&
                             up.Usuario.CodEmpresa == codEmp &&
+                            up.Usuario.Ativo &&
                             up.Perfil.Nome == "Admin");
 
-          if (!isAdmin)
+          if (!isAdminAtivo)
             return false;
 
           var totalAdminsAtivos = await db.UsuariosPerfis
@@ -39,6 +40,88 @@ public static class UsuarioEndpoints
               up.Perfil.Nome == "Admin");
 
           return totalAdminsAtivos <= 1;
+        }
+
+        static async Task<(string Code, string Message)?> ObterBloqueioExclusaoAsync(SfaDbContext db, Guid usuarioId, int codEmp)
+        {
+          var possuiAgendamentoEmAberto = await db.Agendamentos
+            .IgnoreQueryFilters()
+            .AnyAsync(x =>
+              x.CodEmpresa == codEmp &&
+              x.ProfissionalId == usuarioId &&
+              (x.Status == "agendado" || x.Status == "confirmado"));
+
+          if (possuiAgendamentoEmAberto)
+          {
+            return (
+              "usuario_com_agendamentos_em_aberto",
+              "Nao e possivel excluir este profissional porque existem agendamentos em aberto vinculados a ele. Cancele ou reatribua os agendamentos antes de excluir."
+            );
+          }
+
+          var possuiAtendimentoAberto = await db.Atendimentos
+            .IgnoreQueryFilters()
+            .AnyAsync(x =>
+              x.CodEmpresa == codEmp &&
+              x.ProfissionalId == usuarioId &&
+              x.Status == SFA.Domain.Entities.AtendimentoStatus.Aberto);
+
+          if (possuiAtendimentoAberto)
+          {
+            return (
+              "usuario_com_atendimentos_abertos",
+              "Nao e possivel excluir este profissional porque existem atendimentos em aberto vinculados a ele. Finalize ou cancele os atendimentos antes de excluir."
+            );
+          }
+
+          // Alguns agregados usam soft delete; IgnoreQueryFilters evita falso negativo
+          // que acabaria gerando violacao de FK no SaveChanges.
+          if (await db.Agendamentos
+                .IgnoreQueryFilters()
+                .AnyAsync(x => x.CodEmpresa == codEmp && x.ProfissionalId == usuarioId))
+            return (
+              "usuario_com_historico",
+              "Nao e possivel excluir fisicamente um usuario com historico vinculado. Inative o usuario para preservar o historico."
+            );
+
+          if (await db.Atendimentos
+                .IgnoreQueryFilters()
+                .AnyAsync(x => x.CodEmpresa == codEmp && x.ProfissionalId == usuarioId))
+            return (
+              "usuario_com_historico",
+              "Nao e possivel excluir fisicamente um usuario com historico vinculado. Inative o usuario para preservar o historico."
+            );
+
+          if (await db.Atestados
+                .AnyAsync(x => x.CodEmpresa == codEmp && x.ProfissionalId == usuarioId))
+            return (
+              "usuario_com_historico",
+              "Nao e possivel excluir fisicamente um usuario com historico vinculado. Inative o usuario para preservar o historico."
+            );
+
+          if (await db.ReceituariosMedicos
+                .AnyAsync(x => x.CodEmpresa == codEmp && x.ProfissionalId == usuarioId))
+            return (
+              "usuario_com_historico",
+              "Nao e possivel excluir fisicamente um usuario com historico vinculado. Inative o usuario para preservar o historico."
+            );
+
+          if (await db.AnexosPaciente
+                .IgnoreQueryFilters()
+                .AnyAsync(x => x.CodEmpresa == codEmp && x.EnviadoPorId == usuarioId))
+            return (
+              "usuario_com_historico",
+              "Nao e possivel excluir fisicamente um usuario com historico vinculado. Inative o usuario para preservar o historico."
+            );
+
+          if (await db.LogsAcessoAnexoPaciente
+                .AnyAsync(x => x.CodEmpresa == codEmp && x.UsuarioId == usuarioId))
+            return (
+              "usuario_com_historico",
+              "Nao e possivel excluir fisicamente um usuario com historico vinculado. Inative o usuario para preservar o historico."
+            );
+
+          return null;
         }
 
         g.MapGet("/", async (ClaimsPrincipal u, string? search, bool? ativo,
@@ -189,7 +272,7 @@ public static class UsuarioEndpoints
             {
               var unicoAdminAtivo = await EhUnicoAdminAtivoAsync(db, entity.Id, codEmp);
               if (unicoAdminAtivo)
-                return Results.Conflict(new { message = "não é possível inativar o único administrador ativo da empresa" });
+                return Results.Conflict(new { code = "usuario_admin_unico_ativo", message = "Nao e possivel inativar o unico administrador ativo da empresa." });
             }
             entity.Ativo = dto.Ativo;
 
@@ -228,7 +311,7 @@ public static class UsuarioEndpoints
 
             var unicoAdminAtivo = await EhUnicoAdminAtivoAsync(db, entity.Id, codEmp);
             if (unicoAdminAtivo)
-              return Results.Conflict(new { message = "não é possível inativar o único administrador ativo da empresa" });
+              return Results.Conflict(new { code = "usuario_admin_unico_ativo", message = "Nao e possivel inativar o unico administrador ativo da empresa." });
             
             entity.Ativo = false;
             await db.SaveChangesAsync();
@@ -243,10 +326,31 @@ public static class UsuarioEndpoints
             
             var unicoAdminAtivo = await EhUnicoAdminAtivoAsync(db, entity.Id, codEmp);
             if (unicoAdminAtivo)
-              return Results.Conflict(new { message = "não é possível excluir o único administrador ativo da empresa" });
+              return Results.Conflict(new { code = "usuario_admin_unico_ativo", message = "Nao e possivel excluir o unico administrador ativo da empresa." });
             
+            var bloqueioExclusao = await ObterBloqueioExclusaoAsync(db, entity.Id, codEmp);
+            if (bloqueioExclusao is not null)
+              return Results.Conflict(new
+              {
+                code = bloqueioExclusao.Value.Code,
+                message = bloqueioExclusao.Value.Message
+              });
+
             db.Usuarios.Remove(entity);
-            await db.SaveChangesAsync();
+
+            try
+            {
+              await db.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation })
+            {
+              return Results.Conflict(new
+              {
+                code = "usuario_com_registros_vinculados",
+                message = "Nao e possivel excluir fisicamente o usuario porque existem registros vinculados."
+              });
+            }
+
             return Results.NoContent();
         });
     }
