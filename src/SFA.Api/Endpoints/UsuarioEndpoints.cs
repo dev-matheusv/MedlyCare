@@ -49,7 +49,7 @@ public static class UsuarioEndpoints
             .AnyAsync(x =>
               x.CodEmpresa == codEmp &&
               x.ProfissionalId == usuarioId &&
-              x.Status != "cancelado");
+              (x.Status == "agendado" || x.Status == "confirmado"));
 
           if (possuiAgendamentoEmAberto)
           {
