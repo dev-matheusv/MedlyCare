@@ -322,5 +322,6 @@ app.MapProfissionalEndpoints();
 app.MapAnexoPacienteEndpoints();
 app.MapAtestadoEndpoints();
 app.MapReceituarioMedicoEndpoints();
+app.MapComplexidadePacienteEndpoints();
 
 app.Run();
