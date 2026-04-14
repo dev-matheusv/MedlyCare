@@ -3,6 +3,7 @@ namespace SFA.Application.Atestados;
 public record AtestadoListItemDto(
   Guid Id,
   Guid PacienteId,
+  string NomePaciente,
   Guid ProfissionalId,
   Guid? AtendimentoId,
   DateTime DataEmissao,
@@ -23,6 +24,7 @@ public record AtestadoDetailsDto(
   Guid Id,
   int CodEmpresa,
   Guid PacienteId,
+  string NomePaciente,
   Guid ProfissionalId,
   Guid? AtendimentoId,
   DateTime DataEmissao,

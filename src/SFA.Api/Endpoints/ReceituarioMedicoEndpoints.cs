@@ -86,18 +86,22 @@ public static class ReceituarioMedicoEndpoints
                 .OrderByDescending(x => x.DataEmissao)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(x => new ReceituarioMedicoListItemDto(
-                    x.Id,
-                    x.PacienteId,
-                    x.ProfissionalId,
-                    x.AtendimentoId,
-                    (int)x.TipoReceituario,
-                    x.DataEmissao,
-                    x.AssinaturaNome,
-                    x.RegistroProfissional,
-                    x.Cancelado,
-                    x.CriadoEm
-                ))
+                .Join(db.Pacientes.AsNoTracking(),
+                    x => x.PacienteId,
+                    p => p.Id,
+                    (x, p) => new ReceituarioMedicoListItemDto(
+                        x.Id,
+                        x.PacienteId,
+                        p.Nome,
+                        x.ProfissionalId,
+                        x.AtendimentoId,
+                        (int)x.TipoReceituario,
+                        x.DataEmissao,
+                        x.AssinaturaNome,
+                        x.RegistroProfissional,
+                        x.Cancelado,
+                        x.CriadoEm
+                    ))
                 .ToListAsync();
 
             return Results.Ok(new { total, page, pageSize, items });
@@ -111,39 +115,43 @@ public static class ReceituarioMedicoEndpoints
             var data = await db.ReceituariosMedicos
                 .AsNoTracking()
                 .Where(x => x.Id == id && x.CodEmpresa == codEmp)
-                .Select(x => new ReceituarioMedicoDetailsDto(
-                    x.Id,
-                    x.CodEmpresa,
-                    x.PacienteId,
-                    x.ProfissionalId,
-                    x.AtendimentoId,
-                    (int)x.TipoReceituario,
-                    x.DataEmissao,
-                    x.Diagnostico,
-                    x.InformarCid,
-                    x.Cid,
-                    x.Observacoes,
-                    x.AssinaturaNome,
-                    x.RegistroProfissional,
-                    x.EnderecoProfissional,
-                    x.Cancelado,
-                    x.MotivoCancelamento,
-                    x.CriadoEm,
-                    x.AtualizadoEm,
-                    x.Itens
-                        .Select(i => new ReceituarioMedicoItemDto(
-                            i.Id,
-                            i.NomeMedicamento,
-                            i.FormaFarmaceutica,
-                            i.Concentracao,
-                            i.ViaAdministracao,
-                            i.Posologia,
-                            i.Quantidade,
-                            i.QuantidadeExtenso,
-                            i.Orientacoes
-                        ))
-                        .ToList()
-                ))
+                .Join(db.Pacientes.AsNoTracking(),
+                    x => x.PacienteId,
+                    p => p.Id,
+                    (x, p) => new ReceituarioMedicoDetailsDto(
+                        x.Id,
+                        x.CodEmpresa,
+                        x.PacienteId,
+                        p.Nome,
+                        x.ProfissionalId,
+                        x.AtendimentoId,
+                        (int)x.TipoReceituario,
+                        x.DataEmissao,
+                        x.Diagnostico,
+                        x.InformarCid,
+                        x.Cid,
+                        x.Observacoes,
+                        x.AssinaturaNome,
+                        x.RegistroProfissional,
+                        x.EnderecoProfissional,
+                        x.Cancelado,
+                        x.MotivoCancelamento,
+                        x.CriadoEm,
+                        x.AtualizadoEm,
+                        x.Itens
+                            .Select(i => new ReceituarioMedicoItemDto(
+                                i.Id,
+                                i.NomeMedicamento,
+                                i.FormaFarmaceutica,
+                                i.Concentracao,
+                                i.ViaAdministracao,
+                                i.Posologia,
+                                i.Quantidade,
+                                i.QuantidadeExtenso,
+                                i.Orientacoes
+                            ))
+                            .ToList()
+                    ))
                 .FirstOrDefaultAsync();
 
             if (data is null)

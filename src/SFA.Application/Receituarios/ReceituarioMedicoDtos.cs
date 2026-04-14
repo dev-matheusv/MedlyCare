@@ -37,6 +37,7 @@ public record ReceituarioMedicoItemUpsertDto(
 public record ReceituarioMedicoListItemDto(
   Guid Id,
   Guid PacienteId,
+  string NomePaciente,
   Guid ProfissionalId,
   Guid? AtendimentoId,
   int TipoReceituario,
@@ -51,6 +52,7 @@ public record ReceituarioMedicoDetailsDto(
   Guid Id,
   int CodEmpresa,
   Guid PacienteId,
+  string NomePaciente,
   Guid ProfissionalId,
   Guid? AtendimentoId,
   int TipoReceituario,

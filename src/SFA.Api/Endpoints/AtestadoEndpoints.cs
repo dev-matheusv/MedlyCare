@@ -75,24 +75,28 @@ public static class AtestadoEndpoints
                 .OrderByDescending(x => x.DataEmissao)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(x => new AtestadoListItemDto(
-                    x.Id,
-                    x.PacienteId,
-                    x.ProfissionalId,
-                    x.AtendimentoId,
-                    x.DataEmissao,
-                    x.DiasAfastamento,
-                    x.DataInicioAfastamento,
-                    x.TipoAfastamento.HasValue ? (int)x.TipoAfastamento.Value : null,
-                    x.DescricaoCurta,
-                    x.InformarCid,
-                    x.Cid,
-                    x.LocalEmissao,
-                    x.Crm,
-                    x.AssinaturaNome,
-                    x.Cancelado,
-                    x.CriadoEm
-                ))
+                .Join(db.Pacientes.AsNoTracking(),
+                    x => x.PacienteId,
+                    p => p.Id,
+                    (x, p) => new AtestadoListItemDto(
+                        x.Id,
+                        x.PacienteId,
+                        p.Nome,
+                        x.ProfissionalId,
+                        x.AtendimentoId,
+                        x.DataEmissao,
+                        x.DiasAfastamento,
+                        x.DataInicioAfastamento,
+                        x.TipoAfastamento.HasValue ? (int)x.TipoAfastamento.Value : null,
+                        x.DescricaoCurta,
+                        x.InformarCid,
+                        x.Cid,
+                        x.LocalEmissao,
+                        x.Crm,
+                        x.AssinaturaNome,
+                        x.Cancelado,
+                        x.CriadoEm
+                    ))
                 .ToListAsync();
 
             return Results.Ok(new { total, page, pageSize, items });
@@ -105,27 +109,31 @@ public static class AtestadoEndpoints
             var item = await db.Atestados
                 .AsNoTracking()
                 .Where(x => x.Id == id && x.CodEmpresa == codEmp)
-                .Select(x => new AtestadoDetailsDto(
-                    x.Id,
-                    x.CodEmpresa,
-                    x.PacienteId,
-                    x.ProfissionalId,
-                    x.AtendimentoId,
-                    x.DataEmissao,
-                    x.DiasAfastamento,
-                    x.DataInicioAfastamento,
-                    x.TipoAfastamento.HasValue ? (int)x.TipoAfastamento.Value : null,
-                    x.DescricaoCurta,
-                    x.InformarCid,
-                    x.Cid,
-                    x.LocalEmissao,
-                    x.Crm,
-                    x.AssinaturaNome,
-                    x.Cancelado,
-                    x.MotivoCancelamento,
-                    x.CriadoEm,
-                    x.AtualizadoEm
-                ))
+                .Join(db.Pacientes.AsNoTracking(),
+                    x => x.PacienteId,
+                    p => p.Id,
+                    (x, p) => new AtestadoDetailsDto(
+                        x.Id,
+                        x.CodEmpresa,
+                        x.PacienteId,
+                        p.Nome,
+                        x.ProfissionalId,
+                        x.AtendimentoId,
+                        x.DataEmissao,
+                        x.DiasAfastamento,
+                        x.DataInicioAfastamento,
+                        x.TipoAfastamento.HasValue ? (int)x.TipoAfastamento.Value : null,
+                        x.DescricaoCurta,
+                        x.InformarCid,
+                        x.Cid,
+                        x.LocalEmissao,
+                        x.Crm,
+                        x.AssinaturaNome,
+                        x.Cancelado,
+                        x.MotivoCancelamento,
+                        x.CriadoEm,
+                        x.AtualizadoEm
+                    ))
                 .FirstOrDefaultAsync();
 
             if (item is null)

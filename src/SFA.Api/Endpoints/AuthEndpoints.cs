@@ -40,16 +40,56 @@ public static class AuthEndpoints
 
             var login = req.Login.Trim();
 
-            if (req.CodEmpresa <= 0 || string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(req.Password))
-                return ApiError("invalid_request", "empresa_login_senha_obrigatorios", StatusCodes.Status400BadRequest);
+            if (string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(req.Password))
+                return ApiError("invalid_request", "login_senha_obrigatorios", StatusCodes.Status400BadRequest);
 
-            var user = await db.Usuarios.FirstOrDefaultAsync(u =>
-                u.CodEmpresa == req.CodEmpresa &&
-                u.Ativo &&
-                EF.Functions.ILike(u.Login, login));
+            Domain.Entities.Usuario? user;
 
-            if (user is null)
-                return ApiError("user_not_found", "Usuário não encontrado.", StatusCodes.Status404NotFound);
+            if (req.CodEmpresa.HasValue)
+            {
+                // Comportamento original: empresa informada explicitamente
+                if (req.CodEmpresa.Value <= 0)
+                    return ApiError("invalid_request", "cod_empresa_invalido", StatusCodes.Status400BadRequest);
+
+                user = await db.Usuarios.FirstOrDefaultAsync(u =>
+                    u.CodEmpresa == req.CodEmpresa.Value &&
+                    u.Ativo &&
+                    EF.Functions.ILike(u.Login, login));
+
+                if (user is null)
+                    return ApiError("user_not_found", "Usuário não encontrado.", StatusCodes.Status404NotFound);
+            }
+            else
+            {
+                // Auto-descoberta de empresa pelo login
+                var matches = await db.Usuarios
+                    .Where(u => u.Ativo && EF.Functions.ILike(u.Login, login))
+                    .Select(u => new { u.Id, u.CodEmpresa, u.Nome, u.PasswordHash, u.Login })
+                    .ToListAsync();
+
+                if (matches.Count == 0)
+                    return ApiError("user_not_found", "Usuário não encontrado.", StatusCodes.Status404NotFound);
+
+                if (matches.Count > 1)
+                {
+                    // Login existe em mais de uma empresa — retorna a lista para o frontend exibir seletor
+                    var empresas = await db.Empresas
+                        .Where(e => matches.Select(m => m.CodEmpresa).Contains(e.CodEmpresa))
+                        .Select(e => new { e.CodEmpresa, e.RazaoSocial })
+                        .ToListAsync();
+
+                    return Results.Json(
+                        new
+                        {
+                            code = "multiple_companies",
+                            message = "O login pertence a mais de uma empresa. Informe o código da empresa.",
+                            empresas
+                        },
+                        statusCode: StatusCodes.Status409Conflict);
+                }
+
+                user = await db.Usuarios.FirstOrDefaultAsync(u => u.Id == matches[0].Id);
+            }
 
             await using var conn = (NpgsqlConnection)db.Database.GetDbConnection();
             if (conn.State != System.Data.ConnectionState.Open)
@@ -57,7 +97,7 @@ public static class AuthEndpoints
 
             await using var cmd = new NpgsqlCommand("SELECT crypt(@p, @h) = @h", conn);
             cmd.Parameters.AddWithValue("p", NpgsqlDbType.Text, req.Password);
-            cmd.Parameters.AddWithValue("h", NpgsqlDbType.Text, user.PasswordHash);
+            cmd.Parameters.AddWithValue("h", NpgsqlDbType.Text, user!.PasswordHash);
 
             var valid = (bool)(await cmd.ExecuteScalarAsync() ?? false);
             if (!valid)
@@ -78,11 +118,12 @@ public static class AuthEndpoints
             });
         })
         .WithSummary("Autentica e retorna um JWT")
-        .WithDescription("Login com empresa obrigatória.")
+        .WithDescription("Login sem empresa: auto-descoberta. Com empresa: busca direta. Se login existir em múltiplas empresas, retorna 409 com a lista.")
         .Produces(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized)
-        .Produces(StatusCodes.Status404NotFound);
+        .Produces(StatusCodes.Status404NotFound)
+        .Produces(StatusCodes.Status409Conflict);
 
         group.MapPost("/recuperar-acesso", async (
             RecuperarAcessoRequest req,
@@ -90,8 +131,8 @@ public static class AuthEndpoints
             IEmailService emailService,
             IOptions<SmtpOptions> smtpOptions) =>
         {
-            if (req.CodEmpresa <= 0 || string.IsNullOrWhiteSpace(req.Email))
-                return Results.BadRequest(new { message = "empresa_email_obrigatorios" });
+            if (string.IsNullOrWhiteSpace(req.Email))
+                return Results.BadRequest(new { message = "email_obrigatorio" });
 
             var smtp = smtpOptions.Value;
 
@@ -110,10 +151,14 @@ public static class AuthEndpoints
 
             var email = req.Email.Trim();
 
-            var user = await db.Usuarios.FirstOrDefaultAsync(u =>
-                u.CodEmpresa == req.CodEmpresa &&
-                u.Ativo &&
-                EF.Functions.ILike(u.Email, email));
+            // Busca por e-mail; se CodEmpresa informado filtra pela empresa, senão busca em todas
+            var query = db.Usuarios
+                .Where(u => u.Ativo && EF.Functions.ILike(u.Email, email));
+
+            if (req.CodEmpresa.HasValue && req.CodEmpresa.Value > 0)
+                query = query.Where(u => u.CodEmpresa == req.CodEmpresa.Value);
+
+            var user = await query.FirstOrDefaultAsync();
 
             if (user is null)
               return Results.Ok(new
@@ -234,7 +279,7 @@ public static class AuthEndpoints
     }
 
     public record LoginRequest(
-        [Required] int CodEmpresa,
+        int? CodEmpresa,
         [Required, MaxLength(200)] string Login,
         [Required, MaxLength(200)] string Password);
 }
