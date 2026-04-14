@@ -26,11 +26,36 @@ public class ReceituarioMedicoConfiguration : IEntityTypeConfiguration<Receituar
         builder.Property(x => x.ProfissionalId)
             .IsRequired();
 
+        builder.Property(x => x.TipoReceituario)
+            .IsRequired();
+
         builder.Property(x => x.DataEmissao)
             .IsRequired();
 
-        builder.Property(x => x.Observacoes)
+        builder.Property(x => x.Diagnostico)
             .HasMaxLength(1000);
+
+        builder.Property(x => x.InformarCid)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(x => x.Cid)
+            .HasMaxLength(10);
+
+        builder.Property(x => x.Observacoes)
+            .HasMaxLength(2000);
+
+        builder.Property(x => x.AssinaturaNome)
+            .IsRequired()
+            .HasMaxLength(200);
+
+        builder.Property(x => x.RegistroProfissional)
+            .IsRequired()
+            .HasMaxLength(20);
+
+        builder.Property(x => x.EnderecoProfissional)
+            .IsRequired()
+            .HasMaxLength(300);
 
         builder.Property(x => x.Cancelado)
             .IsRequired()

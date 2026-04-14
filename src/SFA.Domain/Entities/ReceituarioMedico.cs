@@ -1,3 +1,5 @@
+using SFA.Domain.Enums;
+
 namespace SFA.Domain.Entities;
 
 public class ReceituarioMedico
@@ -15,9 +17,20 @@ public class ReceituarioMedico
   public Guid? AtendimentoId { get; set; }
   public Atendimento? Atendimento { get; set; }
 
+  public TipoReceituario TipoReceituario { get; set; }
+
   public DateTime DataEmissao { get; set; }
 
+  public string? Diagnostico { get; set; }
+
+  public bool InformarCid { get; set; }
+  public string? Cid { get; set; }
+
   public string? Observacoes { get; set; }
+
+  public string AssinaturaNome { get; set; } = null!;
+  public string RegistroProfissional { get; set; } = null!;   // CRM/CRO/COREN etc
+  public string EnderecoProfissional { get; set; } = null!;
 
   public bool Cancelado { get; set; }
   public string? MotivoCancelamento { get; set; }

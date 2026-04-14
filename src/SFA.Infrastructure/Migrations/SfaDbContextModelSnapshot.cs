@@ -950,6 +950,12 @@ namespace SFA.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("atendimento_id");
 
+                    b.Property<string>("AssinaturaNome")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("assinatura_nome");
+
                     b.Property<DateTime?>("AtualizadoEm")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("atualizado_em");
@@ -959,6 +965,11 @@ namespace SFA.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false)
                         .HasColumnName("cancelado");
+
+                    b.Property<string>("Cid")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("cid");
 
                     b.Property<int>("CodEmpresa")
                         .HasColumnType("integer")
@@ -974,14 +985,31 @@ namespace SFA.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("data_emissao");
 
+                    b.Property<string>("Diagnostico")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("diagnostico");
+
+                    b.Property<string>("EnderecoProfissional")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("endereco_profissional");
+
+                    b.Property<bool>("InformarCid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("informar_cid");
+
                     b.Property<string>("MotivoCancelamento")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
                         .HasColumnName("motivo_cancelamento");
 
                     b.Property<string>("Observacoes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
                         .HasColumnName("observacoes");
 
                     b.Property<Guid>("PacienteId")
@@ -991,6 +1019,16 @@ namespace SFA.Infrastructure.Migrations
                     b.Property<Guid>("ProfissionalId")
                         .HasColumnType("uuid")
                         .HasColumnName("profissional_id");
+
+                    b.Property<string>("RegistroProfissional")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("registro_profissional");
+
+                    b.Property<int>("TipoReceituario")
+                        .HasColumnType("integer")
+                        .HasColumnName("tipo_receituario");
 
                     b.HasKey("Id")
                         .HasName("pk_receituario_medico");
@@ -1036,19 +1074,30 @@ namespace SFA.Infrastructure.Migrations
 
                     b.Property<string>("NomeMedicamento")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
                         .HasColumnName("nome_medicamento");
 
                     b.Property<string>("Orientacoes")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
                         .HasColumnName("orientacoes");
 
                     b.Property<string>("Posologia")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
                         .HasColumnName("posologia");
+
+                    b.Property<string>("Quantidade")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("quantidade");
+
+                    b.Property<string>("QuantidadeExtenso")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("quantidade_extenso");
 
                     b.Property<Guid>("ReceituarioMedicoId")
                         .HasColumnType("uuid")
