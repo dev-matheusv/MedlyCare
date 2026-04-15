@@ -456,7 +456,7 @@ namespace SFA.Infrastructure.Migrations
                     b.ToTable("atestado", (string)null);
                 });
 
-            modelBuilder.Entity("SFA.Domain.Entities.ComplexidadePaciente", b =>
+            modelBuilder.Entity("SFA.Domain.Entities.Complexidade", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -468,11 +468,23 @@ namespace SFA.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("cod_empresa");
 
+                    b.Property<string>("Descricao")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("descricao");
+
                     b.Property<string>("Cor")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("cor");
+
+                    b.Property<bool>("Ativo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasColumnName("ativo")
+                        .HasDefaultValue(true);
 
                     b.Property<DateTime>("CriadoEm")
                         .ValueGeneratedOnAdd()
@@ -480,42 +492,19 @@ namespace SFA.Infrastructure.Migrations
                         .HasColumnName("criado_em")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<Guid>("CriadoPorUsuarioId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("criado_por_usuario_id");
-
-                    b.Property<string>("Nivel")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("nivel");
-
-                    b.Property<string>("Observacoes")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("observacoes");
-
-                    b.Property<Guid>("PacienteId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("paciente_id");
-
-                    b.Property<Guid>("ProfissionalId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("profissional_id");
+                    b.Property<DateTime>("AtualizadoEm")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("atualizado_em")
+                        .HasDefaultValueSql("now()");
 
                     b.HasKey("Id")
-                        .HasName("pk_complexidade_paciente");
+                        .HasName("pk_complexidade");
 
-                    b.HasIndex("ProfissionalId")
-                        .HasDatabaseName("ix_complexidade_paciente_profissional_id");
+                    b.HasIndex("CodEmpresa", "Ativo")
+                        .HasDatabaseName("ix_complexidade_cod_empresa_ativo");
 
-                    b.HasIndex("CodEmpresa", "PacienteId", "CriadoEm")
-                        .HasDatabaseName("ix_complexidade_paciente_cod_empresa_paciente_id_criado_em");
-
-                    b.HasIndex("CodEmpresa", "ProfissionalId")
-                        .HasDatabaseName("ix_complexidade_paciente_cod_empresa_profissional_id");
-
-                    b.ToTable("complexidade_paciente", (string)null);
+                    b.ToTable("complexidade", (string)null);
                 });
 
             modelBuilder.Entity("SFA.Domain.Entities.ConfirmacaoAgendamento", b =>
@@ -851,6 +840,52 @@ namespace SFA.Infrastructure.Migrations
                         .HasDatabaseName("ix_paciente_cod_empresa_nome");
 
                     b.ToTable("paciente", (string)null);
+                });
+
+            modelBuilder.Entity("SFA.Domain.Entities.PacienteComplexidade", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<int>("CodEmpresa")
+                        .HasColumnType("integer")
+                        .HasColumnName("cod_empresa");
+
+                    b.Property<Guid>("PacienteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("paciente_id");
+
+                    b.Property<Guid>("ComplexidadeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("complexidade_id");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.Property<Guid?>("AtendimentoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("atendimento_id");
+
+                    b.Property<DateTime>("Data")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("data")
+                        .HasDefaultValueSql("now()");
+
+                    b.HasKey("Id")
+                        .HasName("pk_paciente_complexidade");
+
+                    b.HasIndex("CodEmpresa", "PacienteId", "Data")
+                        .HasDatabaseName("ix_paciente_complexidade_cod_empresa_paciente_id_data");
+
+                    b.HasIndex("CodEmpresa", "ComplexidadeId")
+                        .HasDatabaseName("ix_paciente_complexidade_cod_empresa_complexidade_id");
+
+                    b.ToTable("paciente_complexidade", (string)null);
                 });
 
             modelBuilder.Entity("SFA.Domain.Entities.PasswordResetToken", b =>
@@ -1311,25 +1346,39 @@ namespace SFA.Infrastructure.Migrations
                     b.Navigation("Profissional");
                 });
 
-            modelBuilder.Entity("SFA.Domain.Entities.ComplexidadePaciente", b =>
+            modelBuilder.Entity("SFA.Domain.Entities.PacienteComplexidade", b =>
                 {
                     b.HasOne("SFA.Domain.Entities.Paciente", "Paciente")
                         .WithMany()
                         .HasForeignKey("PacienteId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
-                        .HasConstraintName("fk_complexidade_paciente_pacientes_paciente_id");
+                        .HasConstraintName("fk_paciente_complexidade_paciente");
 
-                    b.HasOne("SFA.Domain.Entities.Usuario", "Profissional")
+                    b.HasOne("SFA.Domain.Entities.Complexidade", "Complexidade")
                         .WithMany()
-                        .HasForeignKey("ProfissionalId")
+                        .HasForeignKey("ComplexidadeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
-                        .HasConstraintName("fk_complexidade_paciente_usuarios_profissional_id");
+                        .HasConstraintName("fk_paciente_complexidade_complexidade");
 
+                    b.HasOne("SFA.Domain.Entities.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_paciente_complexidade_usuario");
+
+                    b.HasOne("SFA.Domain.Entities.Atendimento", "Atendimento")
+                        .WithMany()
+                        .HasForeignKey("AtendimentoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_paciente_complexidade_atendimento");
+
+                    b.Navigation("Atendimento");
+                    b.Navigation("Complexidade");
                     b.Navigation("Paciente");
-
-                    b.Navigation("Profissional");
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("SFA.Domain.Entities.LogAcessoAnexoPaciente", b =>
