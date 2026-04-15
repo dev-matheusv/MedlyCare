@@ -3,6 +3,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using SFA.Application.Receituarios;
 using SFA.Domain.Entities;
+using SFA.Domain.Enums;
 using SFA.Infrastructure;
 
 namespace SFA.Api.Endpoints;
@@ -34,6 +35,17 @@ public static class ReceituarioMedicoEndpoints
         static IResult Html(string html)
             => Results.Content(html, "text/html; charset=utf-8");
 
+        static string TipoReceituarioLabel(TipoReceituario tipo) => tipo switch
+        {
+            TipoReceituario.BrancaSimples     => "Receituário Branco Simples",
+            TipoReceituario.BrancaEspecial    => "Receituário Branco Especial",
+            TipoReceituario.ControleEspecial  => "Receituário de Controle Especial",
+            TipoReceituario.ReceitaB          => "Receita B (Azul)",
+            TipoReceituario.ReceitaA          => "Receita A (Amarela)",
+            _                                 => "Receituário Médico"
+        };
+
+        // GET /receituarios-medicos
         g.MapGet("/", async (
             ClaimsPrincipal u,
             Guid? pacienteId,
@@ -74,21 +86,28 @@ public static class ReceituarioMedicoEndpoints
                 .OrderByDescending(x => x.DataEmissao)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(x => new ReceituarioMedicoListItemDto(
-                    x.Id,
-                    x.PacienteId,
-                    x.ProfissionalId,
-                    x.AtendimentoId,
-                    x.DataEmissao,
-                    x.Observacoes,
-                    x.Cancelado,
-                    x.CriadoEm
-                ))
+                .Join(db.Pacientes.AsNoTracking(),
+                    x => x.PacienteId,
+                    p => p.Id,
+                    (x, p) => new ReceituarioMedicoListItemDto(
+                        x.Id,
+                        x.PacienteId,
+                        p.Nome,
+                        x.ProfissionalId,
+                        x.AtendimentoId,
+                        (int)x.TipoReceituario,
+                        x.DataEmissao,
+                        x.AssinaturaNome,
+                        x.RegistroProfissional,
+                        x.Cancelado,
+                        x.CriadoEm
+                    ))
                 .ToListAsync();
 
             return Results.Ok(new { total, page, pageSize, items });
         });
 
+        // GET /receituarios-medicos/{id}
         g.MapGet("/{id:guid}", async (ClaimsPrincipal u, Guid id, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
@@ -96,30 +115,43 @@ public static class ReceituarioMedicoEndpoints
             var data = await db.ReceituariosMedicos
                 .AsNoTracking()
                 .Where(x => x.Id == id && x.CodEmpresa == codEmp)
-                .Select(x => new ReceituarioMedicoDetailsDto(
-                    x.Id,
-                    x.CodEmpresa,
-                    x.PacienteId,
-                    x.ProfissionalId,
-                    x.AtendimentoId,
-                    x.DataEmissao,
-                    x.Observacoes,
-                    x.Cancelado,
-                    x.MotivoCancelamento,
-                    x.CriadoEm,
-                    x.AtualizadoEm,
-                    x.Itens
-                        .Select(i => new ReceituarioMedicoItemDto(
-                            i.Id,
-                            i.NomeMedicamento,
-                            i.FormaFarmaceutica,
-                            i.Concentracao,
-                            i.ViaAdministracao,
-                            i.Posologia,
-                            i.Orientacoes
-                        ))
-                        .ToList()
-                ))
+                .Join(db.Pacientes.AsNoTracking(),
+                    x => x.PacienteId,
+                    p => p.Id,
+                    (x, p) => new ReceituarioMedicoDetailsDto(
+                        x.Id,
+                        x.CodEmpresa,
+                        x.PacienteId,
+                        p.Nome,
+                        x.ProfissionalId,
+                        x.AtendimentoId,
+                        (int)x.TipoReceituario,
+                        x.DataEmissao,
+                        x.Diagnostico,
+                        x.InformarCid,
+                        x.Cid,
+                        x.Observacoes,
+                        x.AssinaturaNome,
+                        x.RegistroProfissional,
+                        x.EnderecoProfissional,
+                        x.Cancelado,
+                        x.MotivoCancelamento,
+                        x.CriadoEm,
+                        x.AtualizadoEm,
+                        x.Itens
+                            .Select(i => new ReceituarioMedicoItemDto(
+                                i.Id,
+                                i.NomeMedicamento,
+                                i.FormaFarmaceutica,
+                                i.Concentracao,
+                                i.ViaAdministracao,
+                                i.Posologia,
+                                i.Quantidade,
+                                i.QuantidadeExtenso,
+                                i.Orientacoes
+                            ))
+                            .ToList()
+                    ))
                 .FirstOrDefaultAsync();
 
             if (data is null)
@@ -135,6 +167,7 @@ public static class ReceituarioMedicoEndpoints
             return Results.Ok(data);
         });
 
+        // POST /receituarios-medicos
         g.MapPost("/", async (
             ClaimsPrincipal u,
             ReceituarioMedicoCreateDto dto,
@@ -186,8 +219,15 @@ public static class ReceituarioMedicoEndpoints
                 PacienteId = dto.PacienteId,
                 ProfissionalId = dto.ProfissionalId,
                 AtendimentoId = dto.AtendimentoId,
+                TipoReceituario = (TipoReceituario)dto.TipoReceituario,
                 DataEmissao = dto.DataEmissao,
+                Diagnostico = dto.Diagnostico,
+                InformarCid = dto.InformarCid,
+                Cid = dto.InformarCid ? dto.Cid : null,
                 Observacoes = dto.Observacoes,
+                AssinaturaNome = dto.AssinaturaNome,
+                RegistroProfissional = dto.RegistroProfissional,
+                EnderecoProfissional = dto.EnderecoProfissional,
                 Cancelado = false,
                 CriadoEm = DateTime.UtcNow,
                 AtualizadoEm = DateTime.UtcNow,
@@ -198,6 +238,8 @@ public static class ReceituarioMedicoEndpoints
                     Concentracao = i.Concentracao,
                     ViaAdministracao = i.ViaAdministracao,
                     Posologia = i.Posologia,
+                    Quantidade = i.Quantidade,
+                    QuantidadeExtenso = i.QuantidadeExtenso,
                     Orientacoes = i.Orientacoes
                 }).ToList()
             };
@@ -208,6 +250,7 @@ public static class ReceituarioMedicoEndpoints
             return Results.Created($"/api/v1/receituarios-medicos/{entity.Id}", new { entity.Id });
         });
 
+        // POST /receituarios-medicos/{id}/cancelar
         g.MapPost("/{id:guid}/cancelar", async (
             ClaimsPrincipal u,
             Guid id,
@@ -245,6 +288,153 @@ public static class ReceituarioMedicoEndpoints
             return Results.NoContent();
         });
 
+        // ─── CRUD de itens (MC-32) ────────────────────────────────────────────
+
+        // POST /receituarios-medicos/{id}/itens
+        g.MapPost("/{id:guid}/itens", async (
+            ClaimsPrincipal u,
+            Guid id,
+            ReceituarioMedicoItemUpsertDto dto,
+            IValidator<ReceituarioMedicoItemUpsertDto> validator,
+            SfaDbContext db) =>
+        {
+            var codEmp = GetCodEmpresa(u);
+
+            var validation = await validator.ValidateAsync(dto);
+            if (!validation.IsValid)
+                return Results.ValidationProblem(validation.ToDictionary());
+
+            var receituario = await db.ReceituariosMedicos
+                .FirstOrDefaultAsync(x => x.Id == id && x.CodEmpresa == codEmp);
+
+            if (receituario is null)
+                return Results.NotFound();
+
+            if (IsProfissionalOnly(u))
+            {
+                var uid = GetUserId(u) ?? Guid.Empty;
+                if (receituario.ProfissionalId != uid)
+                    return Results.Forbid();
+            }
+
+            if (receituario.Cancelado)
+                return Results.Conflict(new { message = "receituario_cancelado_nao_editavel" });
+
+            var item = new ReceituarioMedicoItem
+            {
+                ReceituarioMedicoId = id,
+                NomeMedicamento = dto.NomeMedicamento,
+                FormaFarmaceutica = dto.FormaFarmaceutica,
+                Concentracao = dto.Concentracao,
+                ViaAdministracao = dto.ViaAdministracao,
+                Posologia = dto.Posologia,
+                Quantidade = dto.Quantidade,
+                QuantidadeExtenso = dto.QuantidadeExtenso,
+                Orientacoes = dto.Orientacoes
+            };
+
+            db.ReceituariosMedicosItens.Add(item);
+
+            receituario.AtualizadoEm = DateTime.UtcNow;
+
+            await db.SaveChangesAsync();
+
+            return Results.Created($"/api/v1/receituarios-medicos/{id}", new { item.Id });
+        });
+
+        // PUT /receituarios-medicos/{id}/itens/{itemId}
+        g.MapPut("/{id:guid}/itens/{itemId:guid}", async (
+            ClaimsPrincipal u,
+            Guid id,
+            Guid itemId,
+            ReceituarioMedicoItemUpsertDto dto,
+            IValidator<ReceituarioMedicoItemUpsertDto> validator,
+            SfaDbContext db) =>
+        {
+            var codEmp = GetCodEmpresa(u);
+
+            var validation = await validator.ValidateAsync(dto);
+            if (!validation.IsValid)
+                return Results.ValidationProblem(validation.ToDictionary());
+
+            var receituario = await db.ReceituariosMedicos
+                .Include(x => x.Itens)
+                .FirstOrDefaultAsync(x => x.Id == id && x.CodEmpresa == codEmp);
+
+            if (receituario is null)
+                return Results.NotFound();
+
+            if (IsProfissionalOnly(u))
+            {
+                var uid = GetUserId(u) ?? Guid.Empty;
+                if (receituario.ProfissionalId != uid)
+                    return Results.Forbid();
+            }
+
+            if (receituario.Cancelado)
+                return Results.Conflict(new { message = "receituario_cancelado_nao_editavel" });
+
+            var item = receituario.Itens.FirstOrDefault(i => i.Id == itemId);
+            if (item is null)
+                return Results.NotFound();
+
+            item.NomeMedicamento = dto.NomeMedicamento;
+            item.FormaFarmaceutica = dto.FormaFarmaceutica;
+            item.Concentracao = dto.Concentracao;
+            item.ViaAdministracao = dto.ViaAdministracao;
+            item.Posologia = dto.Posologia;
+            item.Quantidade = dto.Quantidade;
+            item.QuantidadeExtenso = dto.QuantidadeExtenso;
+            item.Orientacoes = dto.Orientacoes;
+
+            receituario.AtualizadoEm = DateTime.UtcNow;
+
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        });
+
+        // DELETE /receituarios-medicos/{id}/itens/{itemId}
+        g.MapDelete("/{id:guid}/itens/{itemId:guid}", async (
+            ClaimsPrincipal u,
+            Guid id,
+            Guid itemId,
+            SfaDbContext db) =>
+        {
+            var codEmp = GetCodEmpresa(u);
+
+            var receituario = await db.ReceituariosMedicos
+                .Include(x => x.Itens)
+                .FirstOrDefaultAsync(x => x.Id == id && x.CodEmpresa == codEmp);
+
+            if (receituario is null)
+                return Results.NotFound();
+
+            if (IsProfissionalOnly(u))
+            {
+                var uid = GetUserId(u) ?? Guid.Empty;
+                if (receituario.ProfissionalId != uid)
+                    return Results.Forbid();
+            }
+
+            if (receituario.Cancelado)
+                return Results.Conflict(new { message = "receituario_cancelado_nao_editavel" });
+
+            var item = receituario.Itens.FirstOrDefault(i => i.Id == itemId);
+            if (item is null)
+                return Results.NotFound();
+
+            if (receituario.Itens.Count <= 1)
+                return Results.Conflict(new { message = "receituario_deve_conter_ao_menos_um_item" });
+
+            db.ReceituariosMedicosItens.Remove(item);
+
+            receituario.AtualizadoEm = DateTime.UtcNow;
+
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        });
+
+        // GET /receituarios-medicos/{id}/imprimir
         g.MapGet("/{id:guid}/imprimir", async (ClaimsPrincipal u, Guid id, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
@@ -255,20 +445,7 @@ public static class ReceituarioMedicoEndpoints
                 .Join(db.Pacientes.AsNoTracking(),
                     r => r.PacienteId,
                     p => p.Id,
-                    (r, p) => new
-                    {
-                        Receituario = r,
-                        PacienteNome = p.Nome
-                    })
-                .Join(db.Usuarios.AsNoTracking(),
-                    rp => rp.Receituario.ProfissionalId,
-                    prof => prof.Id,
-                    (rp, prof) => new
-                    {
-                        rp.Receituario,
-                        rp.PacienteNome,
-                        ProfissionalNome = prof.Nome
-                    })
+                    (r, p) => new { Receituario = r, PacienteNome = p.Nome })
                 .FirstOrDefaultAsync();
 
             if (data is null)
@@ -288,6 +465,7 @@ public static class ReceituarioMedicoEndpoints
                   {(string.IsNullOrWhiteSpace(item.Concentracao) ? "" : $"<p><strong>Concentração:</strong> {System.Net.WebUtility.HtmlEncode(item.Concentracao)}</p>")}
                   {(string.IsNullOrWhiteSpace(item.ViaAdministracao) ? "" : $"<p><strong>Via de administração:</strong> {System.Net.WebUtility.HtmlEncode(item.ViaAdministracao)}</p>")}
                   {(string.IsNullOrWhiteSpace(item.Posologia) ? "" : $"<p><strong>Posologia:</strong> {System.Net.WebUtility.HtmlEncode(item.Posologia)}</p>")}
+                  <p><strong>Quantidade:</strong> {System.Net.WebUtility.HtmlEncode(item.Quantidade)}{(string.IsNullOrWhiteSpace(item.QuantidadeExtenso) ? "" : $" ({System.Net.WebUtility.HtmlEncode(item.QuantidadeExtenso)})")}</p>
                   {(string.IsNullOrWhiteSpace(item.Orientacoes) ? "" : $"<p><strong>Orientações:</strong> {System.Net.WebUtility.HtmlEncode(item.Orientacoes)}</p>")}
                 </div>
                 """));
@@ -296,9 +474,15 @@ public static class ReceituarioMedicoEndpoints
                 ? $"<p style=\"color:red;\"><strong>DOCUMENTO CANCELADO</strong><br/>Motivo: {System.Net.WebUtility.HtmlEncode(data.Receituario.MotivoCancelamento ?? "-")}</p>"
                 : "";
 
+            var diagnosticoHtml = data.Receituario.InformarCid && !string.IsNullOrWhiteSpace(data.Receituario.Cid)
+                ? $"<p><strong>CID:</strong> {System.Net.WebUtility.HtmlEncode(data.Receituario.Cid)}</p>"
+                : "";
+
             var observacoesHtml = string.IsNullOrWhiteSpace(data.Receituario.Observacoes)
                 ? ""
-                : $"<p><strong>Observações gerais:</strong> {System.Net.WebUtility.HtmlEncode(data.Receituario.Observacoes)}</p>";
+                : $"<p><strong>Observações:</strong> {System.Net.WebUtility.HtmlEncode(data.Receituario.Observacoes)}</p>";
+
+            var tipoLabel = TipoReceituarioLabel(data.Receituario.TipoReceituario);
 
             var html = $$"""
             <!doctype html>
@@ -306,7 +490,7 @@ public static class ReceituarioMedicoEndpoints
             <head>
               <meta charset="utf-8"/>
               <meta name="viewport" content="width=device-width,initial-scale=1"/>
-              <title>Receituário Médico</title>
+              <title>{{tipoLabel}}</title>
               <style>
                 body {
                   font-family: Arial, sans-serif;
@@ -315,36 +499,24 @@ public static class ReceituarioMedicoEndpoints
                   padding: 24px;
                   color: #111827;
                 }
-                h1 {
-                  text-align: center;
-                  margin-bottom: 32px;
-                }
-                p {
-                  line-height: 1.5;
-                  font-size: 15px;
-                  margin: 6px 0;
-                }
-                .item {
-                  border: 1px solid #e5e7eb;
-                  border-radius: 8px;
-                  padding: 12px;
-                  margin-bottom: 16px;
-                }
-                .assinatura {
-                  margin-top: 48px;
-                }
+                h1 { text-align: center; margin-bottom: 8px; }
+                .subtitulo { text-align: center; font-size: 13px; color: #6b7280; margin-bottom: 32px; }
+                p { line-height: 1.5; font-size: 15px; margin: 6px 0; }
+                .item { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 16px; }
+                .assinatura { margin-top: 48px; }
+                hr { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
               </style>
             </head>
             <body>
-              <h1>RECEITUÁRIO MÉDICO</h1>
+              <h1>{{tipoLabel.ToUpper()}}</h1>
+              <p class="subtitulo">{{data.Receituario.DataEmissao:dd/MM/yyyy}}</p>
 
               {{canceladoHtml}}
 
               <p><strong>Paciente:</strong> {{System.Net.WebUtility.HtmlEncode(data.PacienteNome)}}</p>
-              <p><strong>Profissional:</strong> {{System.Net.WebUtility.HtmlEncode(data.ProfissionalNome)}}</p>
-              <p><strong>Data de emissão:</strong> {{data.Receituario.DataEmissao:dd/MM/yyyy}}</p>
+              {{diagnosticoHtml}}
 
-              <hr style="margin: 24px 0;" />
+              <hr />
 
               {{itensHtml}}
 
@@ -352,7 +524,9 @@ public static class ReceituarioMedicoEndpoints
 
               <div class="assinatura">
                 <p>________________________________________</p>
-                <p><strong>{{System.Net.WebUtility.HtmlEncode(data.ProfissionalNome)}}</strong></p>
+                <p><strong>{{System.Net.WebUtility.HtmlEncode(data.Receituario.AssinaturaNome)}}</strong></p>
+                <p>{{System.Net.WebUtility.HtmlEncode(data.Receituario.RegistroProfissional)}}</p>
+                <p>{{System.Net.WebUtility.HtmlEncode(data.Receituario.EnderecoProfissional)}}</p>
               </div>
             </body>
             </html>

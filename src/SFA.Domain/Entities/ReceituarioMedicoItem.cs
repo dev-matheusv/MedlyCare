@@ -12,5 +12,7 @@ public class ReceituarioMedicoItem
   public string? Concentracao { get; set; }
   public string? ViaAdministracao { get; set; }
   public string? Posologia { get; set; }
+  public string Quantidade { get; set; } = null!;
+  public string? QuantidadeExtenso { get; set; }
   public string? Orientacoes { get; set; }
 }

@@ -20,6 +20,8 @@ public class SfaDbContext(DbContextOptions<SfaDbContext> options) : DbContext(op
   public DbSet<Atestado> Atestados => Set<Atestado>();
   public DbSet<ReceituarioMedico> ReceituariosMedicos => Set<ReceituarioMedico>();
   public DbSet<ReceituarioMedicoItem> ReceituariosMedicosItens => Set<ReceituarioMedicoItem>();
+  public DbSet<Complexidade> Complexidades => Set<Complexidade>();
+  public DbSet<PacienteComplexidade> PacientesComplexidade => Set<PacienteComplexidade>();
 
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {

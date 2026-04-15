@@ -1,4 +1,5 @@
 using FluentValidation;
+using SFA.Domain.Enums;
 
 namespace SFA.Application.Receituarios;
 
@@ -12,11 +13,36 @@ public class ReceituarioMedicoCreateValidator : AbstractValidator<ReceituarioMed
     RuleFor(x => x.ProfissionalId)
       .NotEmpty();
 
+    RuleFor(x => x.TipoReceituario)
+      .IsInEnum()
+      .WithMessage("tipo_receituario_invalido");
+
     RuleFor(x => x.DataEmissao)
       .NotEmpty();
 
+    RuleFor(x => x.Diagnostico)
+      .MaximumLength(1000)
+      .When(x => x.Diagnostico is not null);
+
+    RuleFor(x => x.Cid)
+      .MaximumLength(10)
+      .When(x => x.Cid is not null);
+
     RuleFor(x => x.Observacoes)
-      .MaximumLength(1000);
+      .MaximumLength(2000)
+      .When(x => x.Observacoes is not null);
+
+    RuleFor(x => x.AssinaturaNome)
+      .NotEmpty().WithMessage("assinatura_nome_obrigatorio")
+      .MaximumLength(200);
+
+    RuleFor(x => x.RegistroProfissional)
+      .NotEmpty().WithMessage("registro_profissional_obrigatorio")
+      .MaximumLength(20);
+
+    RuleFor(x => x.EnderecoProfissional)
+      .NotEmpty().WithMessage("endereco_profissional_obrigatorio")
+      .MaximumLength(300);
 
     RuleFor(x => x.Itens)
       .NotEmpty()
@@ -26,22 +52,35 @@ public class ReceituarioMedicoCreateValidator : AbstractValidator<ReceituarioMed
     {
       item.RuleFor(i => i.NomeMedicamento)
         .NotEmpty()
-        .MaximumLength(200);
+        .MaximumLength(300);
 
       item.RuleFor(i => i.FormaFarmaceutica)
-        .MaximumLength(100);
+        .MaximumLength(100)
+        .When(i => i.FormaFarmaceutica is not null);
 
       item.RuleFor(i => i.Concentracao)
-        .MaximumLength(100);
+        .MaximumLength(100)
+        .When(i => i.Concentracao is not null);
 
       item.RuleFor(i => i.ViaAdministracao)
-        .MaximumLength(100);
+        .MaximumLength(100)
+        .When(i => i.ViaAdministracao is not null);
 
       item.RuleFor(i => i.Posologia)
-        .MaximumLength(500);
+        .MaximumLength(1000)
+        .When(i => i.Posologia is not null);
+
+      item.RuleFor(i => i.Quantidade)
+        .NotEmpty().WithMessage("quantidade_obrigatoria")
+        .MaximumLength(200);
+
+      item.RuleFor(i => i.QuantidadeExtenso)
+        .MaximumLength(200)
+        .When(i => i.QuantidadeExtenso is not null);
 
       item.RuleFor(i => i.Orientacoes)
-        .MaximumLength(500);
+        .MaximumLength(1000)
+        .When(i => i.Orientacoes is not null);
     });
   }
 }

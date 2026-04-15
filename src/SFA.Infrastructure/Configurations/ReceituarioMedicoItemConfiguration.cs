@@ -22,7 +22,7 @@ public class ReceituarioMedicoItemConfiguration : IEntityTypeConfiguration<Recei
 
     builder.Property(x => x.NomeMedicamento)
       .IsRequired()
-      .HasMaxLength(200);
+      .HasMaxLength(300);
 
     builder.Property(x => x.FormaFarmaceutica)
       .HasMaxLength(100);
@@ -34,10 +34,17 @@ public class ReceituarioMedicoItemConfiguration : IEntityTypeConfiguration<Recei
       .HasMaxLength(100);
 
     builder.Property(x => x.Posologia)
-      .HasMaxLength(500);
+      .HasMaxLength(1000);
+
+    builder.Property(x => x.Quantidade)
+      .IsRequired()
+      .HasMaxLength(200);
+
+    builder.Property(x => x.QuantidadeExtenso)
+      .HasMaxLength(200);
 
     builder.Property(x => x.Orientacoes)
-      .HasMaxLength(500);
+      .HasMaxLength(1000);
 
     builder.HasIndex(x => x.ReceituarioMedicoId);
   }
