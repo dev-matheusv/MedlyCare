@@ -14,7 +14,7 @@ public class ReceituarioMedicoCreateValidator : AbstractValidator<ReceituarioMed
       .NotEmpty();
 
     RuleFor(x => x.TipoReceituario)
-      .IsInEnum()
+      .Must(v => Enum.IsDefined(typeof(TipoReceituario), v))
       .WithMessage("tipo_receituario_invalido");
 
     RuleFor(x => x.DataEmissao)
