@@ -5,7 +5,7 @@ on:
     branches: [ main ]
     paths:
       - "src/SFA.Api/**"
-      - "src/SFA.*/*"
+      - "src/SFA.*/**"
       - "SFA.sln"
       - "ecs-taskdef.json"
       - ".github/workflows/ci-cd-backend-ecs.yml"
