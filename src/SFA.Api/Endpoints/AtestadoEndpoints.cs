@@ -78,24 +78,31 @@ public static class AtestadoEndpoints
                 .Join(db.Pacientes.AsNoTracking(),
                     x => x.PacienteId,
                     p => p.Id,
-                    (x, p) => new AtestadoListItemDto(
-                        x.Id,
-                        x.PacienteId,
-                        p.Nome,
-                        x.ProfissionalId,
-                        x.AtendimentoId,
-                        x.DataEmissao,
-                        x.DiasAfastamento,
-                        x.DataInicioAfastamento,
-                        x.TipoAfastamento.HasValue ? (int)x.TipoAfastamento.Value : null,
-                        x.DescricaoCurta,
-                        x.InformarCid,
-                        x.Cid,
-                        x.LocalEmissao,
-                        x.Crm,
-                        x.AssinaturaNome,
-                        x.Cancelado,
-                        x.CriadoEm
+                    (x, p) => new { Atestado = x, NomePaciente = p.Nome })
+                .Join(db.Usuarios.AsNoTracking(),
+                    x => x.Atestado.ProfissionalId,
+                    us => us.Id,
+                    (x, us) => new AtestadoListItemDto(
+                        x.Atestado.Id,
+                        x.Atestado.PacienteId,
+                        x.NomePaciente,
+                        x.Atestado.ProfissionalId,
+                        us.Nome,
+                        x.Atestado.AtendimentoId,
+                        x.Atestado.DataEmissao,
+                        x.Atestado.DiasAfastamento,
+                        x.Atestado.HoraInicio,
+                        x.Atestado.HoraFim,
+                        x.Atestado.DataInicioAfastamento,
+                        x.Atestado.TipoAfastamento.HasValue ? (int)x.Atestado.TipoAfastamento.Value : null,
+                        x.Atestado.DescricaoCurta,
+                        x.Atestado.InformarCid,
+                        x.Atestado.Cid,
+                        x.Atestado.LocalEmissao,
+                        x.Atestado.Crm,
+                        x.Atestado.AssinaturaNome,
+                        x.Atestado.Cancelado,
+                        x.Atestado.CriadoEm
                     ))
                 .ToListAsync();
 
@@ -106,45 +113,54 @@ public static class AtestadoEndpoints
         {
             var codEmp = GetCodEmpresa(u);
 
-            var item = await db.Atestados
+            var raw = await db.Atestados
                 .AsNoTracking()
                 .Where(x => x.Id == id && x.CodEmpresa == codEmp)
                 .Join(db.Pacientes.AsNoTracking(),
                     x => x.PacienteId,
                     p => p.Id,
-                    (x, p) => new AtestadoDetailsDto(
-                        x.Id,
-                        x.CodEmpresa,
-                        x.PacienteId,
-                        p.Nome,
-                        x.ProfissionalId,
-                        x.AtendimentoId,
-                        x.DataEmissao,
-                        x.DiasAfastamento,
-                        x.DataInicioAfastamento,
-                        x.TipoAfastamento.HasValue ? (int)x.TipoAfastamento.Value : null,
-                        x.DescricaoCurta,
-                        x.InformarCid,
-                        x.Cid,
-                        x.LocalEmissao,
-                        x.Crm,
-                        x.AssinaturaNome,
-                        x.Cancelado,
-                        x.MotivoCancelamento,
-                        x.CriadoEm,
-                        x.AtualizadoEm
-                    ))
+                    (x, p) => new { Atestado = x, NomePaciente = p.Nome })
+                .Join(db.Usuarios.AsNoTracking(),
+                    x => x.Atestado.ProfissionalId,
+                    us => us.Id,
+                    (x, us) => new { x.Atestado, x.NomePaciente, NomeProfissional = us.Nome })
                 .FirstOrDefaultAsync();
 
-            if (item is null)
+            if (raw is null)
                 return Results.NotFound();
 
             if (IsProfissionalOnly(u))
             {
                 var uid = GetUserId(u) ?? Guid.Empty;
-                if (item.ProfissionalId != uid)
+                if (raw.Atestado.ProfissionalId != uid)
                     return Results.Forbid();
             }
+
+            var item = new AtestadoDetailsDto(
+                raw.Atestado.Id,
+                raw.Atestado.CodEmpresa,
+                raw.Atestado.PacienteId,
+                raw.NomePaciente,
+                raw.Atestado.ProfissionalId,
+                raw.NomeProfissional,
+                raw.Atestado.AtendimentoId,
+                raw.Atestado.DataEmissao,
+                raw.Atestado.DiasAfastamento,
+                raw.Atestado.HoraInicio,
+                raw.Atestado.HoraFim,
+                raw.Atestado.DataInicioAfastamento,
+                raw.Atestado.TipoAfastamento.HasValue ? (int)raw.Atestado.TipoAfastamento.Value : null,
+                raw.Atestado.DescricaoCurta,
+                raw.Atestado.InformarCid,
+                raw.Atestado.Cid,
+                raw.Atestado.LocalEmissao,
+                raw.Atestado.Crm,
+                raw.Atestado.AssinaturaNome,
+                raw.Atestado.Cancelado,
+                raw.Atestado.MotivoCancelamento,
+                raw.Atestado.CriadoEm,
+                raw.Atestado.AtualizadoEm
+            );
 
             return Results.Ok(item);
         });
@@ -156,11 +172,11 @@ public static class AtestadoEndpoints
             SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
+            var userId = GetUserId(u) ?? Guid.Empty;
 
             if (IsProfissionalOnly(u))
             {
-                var uid = GetUserId(u) ?? Guid.Empty;
-                if (dto.ProfissionalId != uid)
+                if (dto.ProfissionalId != userId)
                     return Results.Forbid();
             }
 
@@ -168,20 +184,21 @@ public static class AtestadoEndpoints
             if (!validation.IsValid)
                 return Results.ValidationProblem(validation.ToDictionary());
 
-            var pacienteOk = await db.Pacientes.AnyAsync(x =>
+            var paciente = await db.Pacientes.FirstOrDefaultAsync(x =>
                 x.Id == dto.PacienteId &&
                 x.CodEmpresa == codEmp &&
                 x.Ativo);
 
-            if (!pacienteOk)
+            if (paciente is null)
                 return Results.NotFound(new { message = "paciente_nao_encontrado" });
 
-            var profissionalOk = await db.Usuarios.AnyAsync(x =>
+            // Busca o profissional para obter o CRM automaticamente
+            var profissional = await db.Usuarios.FirstOrDefaultAsync(x =>
                 x.Id == dto.ProfissionalId &&
                 x.CodEmpresa == codEmp &&
                 x.Ativo);
 
-            if (!profissionalOk)
+            if (profissional is null)
                 return Results.NotFound(new { message = "profissional_nao_encontrado" });
 
             if (dto.AtendimentoId.HasValue)
@@ -194,14 +211,25 @@ public static class AtestadoEndpoints
                     return Results.NotFound(new { message = "atendimento_nao_encontrado" });
             }
 
+            // LocalEmissao automático: Cidade/UF da empresa
+            var empresa = await db.Empresas
+                .AsNoTracking()
+                .FirstOrDefaultAsync(e => e.CodEmpresa == codEmp);
+
+            var localEmissao = empresa is not null
+                ? $"{empresa.Cidade}/{empresa.Uf}"
+                : null;
+
             var entity = new Atestado
             {
                 CodEmpresa = codEmp,
                 PacienteId = dto.PacienteId,
                 ProfissionalId = dto.ProfissionalId,
                 AtendimentoId = dto.AtendimentoId,
-                DataEmissao = dto.DataEmissao,
+                DataEmissao = DateTime.UtcNow,         // automático
                 DiasAfastamento = dto.DiasAfastamento,
+                HoraInicio = dto.HoraInicio,
+                HoraFim = dto.HoraFim,
                 DataInicioAfastamento = dto.DataInicioAfastamento,
                 TipoAfastamento = dto.TipoAfastamento.HasValue
                     ? (TipoAfastamento)dto.TipoAfastamento.Value
@@ -209,8 +237,8 @@ public static class AtestadoEndpoints
                 DescricaoCurta = dto.DescricaoCurta,
                 InformarCid = dto.InformarCid,
                 Cid = dto.InformarCid ? dto.Cid : null,
-                LocalEmissao = dto.LocalEmissao,
-                Crm = dto.Crm,
+                LocalEmissao = localEmissao,            // automático da empresa
+                Crm = profissional.Crm,                 // automático do usuário
                 AssinaturaNome = dto.AssinaturaNome,
                 Cancelado = false,
                 CriadoEm = DateTime.UtcNow,
@@ -296,6 +324,21 @@ public static class AtestadoEndpoints
                 ? $"<p style=\"color:red;\"><strong>DOCUMENTO CANCELADO</strong><br/>Motivo: {System.Net.WebUtility.HtmlEncode(data.Atestado.MotivoCancelamento ?? "-")}</p>"
                 : "";
 
+            // Afastamento: dias ou período de horas
+            string afastamentoTexto;
+            if (data.Atestado.DiasAfastamento > 0)
+            {
+                afastamentoTexto = $"<strong>{data.Atestado.DiasAfastamento}</strong> dia(s), a contar de <strong>{inicio:dd/MM/yyyy}</strong>";
+            }
+            else if (data.Atestado.HoraInicio.HasValue && data.Atestado.HoraFim.HasValue)
+            {
+                afastamentoTexto = $"o período de <strong>{data.Atestado.HoraInicio.Value:hh\\:mm}</strong> às <strong>{data.Atestado.HoraFim.Value:hh\\:mm}</strong> do dia <strong>{inicio:dd/MM/yyyy}</strong>";
+            }
+            else
+            {
+                afastamentoTexto = $"<strong>{data.Atestado.DiasAfastamento}</strong> dia(s), a contar de <strong>{inicio:dd/MM/yyyy}</strong>";
+            }
+
             var html = $$"""
                          <!doctype html>
                          <html lang="pt-br">
@@ -333,8 +376,7 @@ public static class AtestadoEndpoints
                              Atesto para os devidos fins que o(a) Sr(a).
                              <strong>{{System.Net.WebUtility.HtmlEncode(data.PacienteNome)}}</strong>
                              necessita de afastamento de suas atividades por
-                             <strong>{{data.Atestado.DiasAfastamento}}</strong> dias,
-                             a contar de <strong>{{inicio:dd/MM/yyyy}}</strong>.
+                             {{afastamentoTexto}}.
                            </p>
 
                            {{(string.IsNullOrWhiteSpace(data.Atestado.DescricaoCurta) ? "" : $"<p>{System.Net.WebUtility.HtmlEncode(data.Atestado.DescricaoCurta)}</p>")}}
@@ -348,7 +390,7 @@ public static class AtestadoEndpoints
 
                            <div class="assinatura">
                              <p><strong>{{System.Net.WebUtility.HtmlEncode(data.Atestado.AssinaturaNome)}}</strong></p>
-                             <p>CRM: {{System.Net.WebUtility.HtmlEncode(data.Atestado.Crm)}}</p>
+                             {{(string.IsNullOrWhiteSpace(data.Atestado.Crm) ? "" : $"<p>CRM: {System.Net.WebUtility.HtmlEncode(data.Atestado.Crm)}</p>")}}
                            </div>
                          </body>
                          </html>

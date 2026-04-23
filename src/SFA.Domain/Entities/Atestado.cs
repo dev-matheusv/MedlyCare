@@ -19,6 +19,8 @@ public class Atestado
 
   public DateTime DataEmissao { get; set; }
   public int DiasAfastamento { get; set; }
+  public TimeSpan? HoraInicio { get; set; }
+  public TimeSpan? HoraFim { get; set; }
   public DateTime? DataInicioAfastamento { get; set; }
 
   public TipoAfastamento? TipoAfastamento { get; set; }
@@ -30,7 +32,7 @@ public class Atestado
 
   public string? LocalEmissao { get; set; }
 
-  public string Crm { get; set; } = null!;
+  public string? Crm { get; set; }
   public string AssinaturaNome { get; set; } = null!;
 
   public bool Cancelado { get; set; }

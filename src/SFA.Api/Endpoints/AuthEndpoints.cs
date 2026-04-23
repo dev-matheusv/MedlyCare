@@ -266,15 +266,35 @@ public static class AuthEndpoints
         .Produces(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest);
 
-        group.MapGet("/me", (ClaimsPrincipal user) =>
+        group.MapGet("/me", async (ClaimsPrincipal user, SfaDbContext db) =>
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier)
                 ?? user.FindFirstValue(JwtRegisteredClaimNames.Sub);
-            var codEmpresa = user.FindFirstValue("cod_empresa");
+            var codEmpresaStr = user.FindFirstValue("cod_empresa");
             var nome = user.FindFirstValue(ClaimTypes.Name);
             var roles = user.FindAll(ClaimTypes.Role).Select(r => r.Value).ToArray();
 
-            return Results.Ok(new { userId, codEmpresa, nome, roles });
+            string? crm = null;
+            string? email = null;
+            string? telefone = null;
+
+            if (Guid.TryParse(userId, out var uid))
+            {
+                var dbUser = await db.Usuarios
+                    .AsNoTracking()
+                    .Where(u => u.Id == uid)
+                    .Select(u => new { u.Crm, u.Email, u.Telefone })
+                    .FirstOrDefaultAsync();
+
+                if (dbUser is not null)
+                {
+                    crm = dbUser.Crm;
+                    email = dbUser.Email;
+                    telefone = dbUser.Telefone;
+                }
+            }
+
+            return Results.Ok(new { userId, codEmpresa = codEmpresaStr, nome, roles, crm, email, telefone });
         }).RequireAuthorization();
     }
 

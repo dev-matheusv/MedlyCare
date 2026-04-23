@@ -32,6 +32,12 @@ public class AtestadoConfiguration : IEntityTypeConfiguration<Atestado>
         builder.Property(x => x.DiasAfastamento)
             .IsRequired();
 
+        builder.Property(x => x.HoraInicio)
+            .HasColumnType("time");
+
+        builder.Property(x => x.HoraFim)
+            .HasColumnType("time");
+
         builder.Property(x => x.DescricaoCurta)
             .HasMaxLength(500);
 
@@ -42,7 +48,6 @@ public class AtestadoConfiguration : IEntityTypeConfiguration<Atestado>
             .HasMaxLength(200);
 
         builder.Property(x => x.Crm)
-            .IsRequired()
             .HasMaxLength(20);
 
         builder.Property(x => x.AssinaturaNome)

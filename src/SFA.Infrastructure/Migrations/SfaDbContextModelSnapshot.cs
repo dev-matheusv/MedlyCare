@@ -384,7 +384,6 @@ namespace SFA.Infrastructure.Migrations
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("Crm")
-                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("crm");
@@ -405,6 +404,14 @@ namespace SFA.Infrastructure.Migrations
                     b.Property<int>("DiasAfastamento")
                         .HasColumnType("integer")
                         .HasColumnName("dias_afastamento");
+
+                    b.Property<TimeSpan?>("HoraFim")
+                        .HasColumnType("time")
+                        .HasColumnName("hora_fim");
+
+                    b.Property<TimeSpan?>("HoraInicio")
+                        .HasColumnType("time")
+                        .HasColumnName("hora_inicio");
 
                     b.Property<bool>("InformarCid")
                         .HasColumnType("boolean")
@@ -1172,6 +1179,11 @@ namespace SFA.Infrastructure.Migrations
                     b.Property<int>("CodEmpresa")
                         .HasColumnType("integer")
                         .HasColumnName("cod_empresa");
+
+                    b.Property<string>("Crm")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("crm");
 
                     b.Property<DateTime>("CriadoEm")
                         .ValueGeneratedOnAdd()

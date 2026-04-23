@@ -44,6 +44,10 @@ public class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
       .HasColumnName("celular_whatsapp")
       .HasMaxLength(20);
 
+    builder.Property(x => x.Crm)
+      .HasColumnName("crm")
+      .HasMaxLength(20);
+
     builder.Property(x => x.PasswordHash)
       .HasColumnName("password_hash")
       .IsRequired();

@@ -13,11 +13,31 @@ public class AtestadoCreateValidator : AbstractValidator<AtestadoCreateDto>
     RuleFor(x => x.ProfissionalId)
       .NotEmpty();
 
-    RuleFor(x => x.DataEmissao)
-      .NotEmpty();
-
+    // DiasAfastamento >= 0; se 0, HoraInicio e HoraFim devem ser informadas
     RuleFor(x => x.DiasAfastamento)
-      .GreaterThan(0);
+      .GreaterThanOrEqualTo(0);
+
+    RuleFor(x => x)
+      .Must(x => x.DiasAfastamento > 0 || (x.HoraInicio.HasValue && x.HoraFim.HasValue))
+      .WithName("DiasAfastamento")
+      .WithMessage("dias_afastamento_obrigatorio_ou_informar_horario");
+
+    // Se HoraInicio ou HoraFim forem informadas, ambas são obrigatórias e HoraFim > HoraInicio
+    When(x => x.HoraInicio.HasValue || x.HoraFim.HasValue, () =>
+    {
+      RuleFor(x => x.HoraInicio)
+        .NotNull()
+        .WithMessage("hora_inicio_obrigatoria_quando_horario_informado");
+
+      RuleFor(x => x.HoraFim)
+        .NotNull()
+        .WithMessage("hora_fim_obrigatoria_quando_horario_informado");
+
+      RuleFor(x => x)
+        .Must(x => !x.HoraInicio.HasValue || !x.HoraFim.HasValue || x.HoraFim > x.HoraInicio)
+        .WithName("HoraFim")
+        .WithMessage("hora_fim_deve_ser_maior_que_hora_inicio");
+    });
 
     RuleFor(x => x.TipoAfastamento)
       .Must(x => x is null || Enum.IsDefined(typeof(TipoAfastamento), x.Value))
@@ -28,13 +48,6 @@ public class AtestadoCreateValidator : AbstractValidator<AtestadoCreateDto>
 
     RuleFor(x => x.Cid)
       .MaximumLength(10);
-
-    RuleFor(x => x.LocalEmissao)
-      .MaximumLength(200);
-
-    RuleFor(x => x.Crm)
-      .NotEmpty()
-      .MaximumLength(20);
 
     RuleFor(x => x.AssinaturaNome)
       .NotEmpty()
