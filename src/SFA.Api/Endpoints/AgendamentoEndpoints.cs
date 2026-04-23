@@ -165,6 +165,12 @@ public static class AgendamentoEndpoints
             var val = await v.ValidateAsync(dto);
             if (!val.IsValid) return Results.ValidationProblem(val.ToDictionary());
 
+            // Normaliza para UTC — Npgsql exige offset=0 em colunas timestamptz.
+            // Isso garante que qualquer offset enviado pelo cliente (ex: -03:00) seja
+            // convertido corretamente para o valor UTC equivalente antes de gravar.
+            var inicioUtc = dto.InicioUtc.ToUniversalTime();
+            var fimUtc    = dto.FimUtc.ToUniversalTime();
+
             // Confirma existência e escopo
             var pacienteOk = await db.Pacientes.AnyAsync(p => p.Id == dto.PacienteId && p.CodEmpresa == codEmp && p.Ativo);
             if (!pacienteOk) return Results.NotFound(new { message = "paciente_nao_encontrado" });
@@ -173,7 +179,7 @@ public static class AgendamentoEndpoints
             if (!profissionalOk) return Results.NotFound(new { message = "profissional_nao_encontrado" });
 
             // Overlap
-            if (await ExisteConflitoAsync(db, codEmp, dto.ProfissionalId, dto.InicioUtc, dto.FimUtc))
+            if (await ExisteConflitoAsync(db, codEmp, dto.ProfissionalId, inicioUtc, fimUtc))
                 return Results.Conflict(new { message = "conflito_horario_profissional" });
 
             var userId = GetUserId(u) ?? Guid.Empty;
@@ -183,8 +189,8 @@ public static class AgendamentoEndpoints
                 CodEmpresa = codEmp,
                 PacienteId = dto.PacienteId,
                 ProfissionalId = dto.ProfissionalId,
-                InicioUtc = dto.InicioUtc,
-                FimUtc = dto.FimUtc,
+                InicioUtc = inicioUtc,
+                FimUtc    = fimUtc,
                 Status = "agendado",
                 Observacoes = dto.Observacoes,
                 CriadoPorUsuarioId = userId,
@@ -215,15 +221,19 @@ public static class AgendamentoEndpoints
                 if (entity.ProfissionalId != uid) return Results.Forbid();
             }
 
+            // Normaliza para UTC — mesmo motivo do POST
+            var inicioUtc = dto.InicioUtc.ToUniversalTime();
+            var fimUtc    = dto.FimUtc.ToUniversalTime();
+
             // Revalida overlap se mudou janela
-            if (entity.InicioUtc != dto.InicioUtc || entity.FimUtc != dto.FimUtc)
+            if (entity.InicioUtc != inicioUtc || entity.FimUtc != fimUtc)
             {
-                if (await ExisteConflitoAsync(db, codEmp, entity.ProfissionalId, dto.InicioUtc, dto.FimUtc, ignorarId: id))
+                if (await ExisteConflitoAsync(db, codEmp, entity.ProfissionalId, inicioUtc, fimUtc, ignorarId: id))
                     return Results.Conflict(new { message = "conflito_horario_profissional" });
             }
 
-            entity.InicioUtc = dto.InicioUtc;
-            entity.FimUtc = dto.FimUtc;
+            entity.InicioUtc = inicioUtc;
+            entity.FimUtc    = fimUtc;
             entity.Status = dto.Status;
             entity.Observacoes = dto.Observacoes;
             entity.AlteradoPorUsuarioId = GetUserId(u);
