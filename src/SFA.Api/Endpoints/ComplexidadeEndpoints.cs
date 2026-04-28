@@ -114,7 +114,7 @@ public static class ComplexidadeEndpoints
             return Results.NoContent();
         });
 
-        // DELETE /complexidades/{id}  (desativa, não exclui fisicamente)
+        // DELETE /complexidades/{id}
         g.MapDelete("/{id:guid}", async (ClaimsPrincipal u, Guid id, SfaDbContext db) =>
         {
             var codEmp = GetCodEmpresa(u);
@@ -125,16 +125,13 @@ public static class ComplexidadeEndpoints
             if (entity is null)
                 return Results.NotFound();
 
-            // Verifica se há vínculos ativos com pacientes
             var emUso = await db.PacientesComplexidade
                 .AnyAsync(pc => pc.ComplexidadeId == id);
 
             if (emUso)
                 return Results.Conflict(new { message = "complexidade_em_uso_por_pacientes" });
 
-            entity.Ativo = false;
-            entity.AtualizadoEm = DateTime.UtcNow;
-
+            db.Complexidades.Remove(entity);
             await db.SaveChangesAsync();
             return Results.NoContent();
         });
