@@ -165,6 +165,7 @@ public static class UsuarioEndpoints
                     x.Email,
                     x.Telefone,
                     x.CelularWhatsapp,
+                    x.Crm,
                     x.Ativo,
                     x.CriadoEm
                 ))
@@ -187,6 +188,7 @@ public static class UsuarioEndpoints
                     x.Email,
                     x.Telefone,
                     x.CelularWhatsapp,
+                    x.Crm,
                     x.Ativo,
                     x.CriadoEm
                 ))
@@ -232,6 +234,7 @@ public static class UsuarioEndpoints
                 Email = dto.Email,
                 Telefone = dto.Telefone,
                 CelularWhatsapp = dto.CelularWhatsapp,
+                Crm = string.IsNullOrWhiteSpace(dto.Crm) ? null : dto.Crm.Trim(),
                 PasswordHash = hash,
                 Ativo = dto.Ativo
             };
@@ -267,6 +270,7 @@ public static class UsuarioEndpoints
             entity.Email = dto.Email;
             entity.Telefone = dto.Telefone;
             entity.CelularWhatsapp = dto.CelularWhatsapp;
+            entity.Crm = string.IsNullOrWhiteSpace(dto.Crm) ? null : dto.Crm.Trim();
             
             if (!dto.Ativo && entity.Ativo)
             {

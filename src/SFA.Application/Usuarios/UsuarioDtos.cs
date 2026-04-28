@@ -8,6 +8,7 @@ public record UsuarioListItemDto(
   string Email,
   string? Telefone,
   string? CelularWhatsapp,
+  string? Crm,
   bool Ativo,
   DateTime CriadoEm
 );
@@ -18,6 +19,7 @@ public record UsuarioCreateDto(
   string Email,
   string? Telefone,
   string? CelularWhatsapp,
+  string? Crm,
   string Password,
   bool Ativo = true
 );
@@ -27,6 +29,7 @@ public record UsuarioUpdateDto(
   string Email,
   string? Telefone,
   string? CelularWhatsapp,
+  string? Crm,
   string? Password,
   bool Ativo
 );

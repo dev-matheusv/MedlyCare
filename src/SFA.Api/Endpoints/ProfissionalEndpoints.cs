@@ -52,6 +52,7 @@ public static class ProfissionalEndpoints
                     x.Email,
                     x.Telefone,
                     x.CelularWhatsapp,
+                    x.Crm,
                     x.Ativo,
                     x.CriadoEm
                 ))
@@ -97,6 +98,7 @@ public static class ProfissionalEndpoints
                 Email = dto.Email,
                 Telefone = dto.Telefone,
                 CelularWhatsapp = dto.CelularWhatsapp,
+                Crm = string.IsNullOrWhiteSpace(dto.Crm) ? null : dto.Crm.Trim(),
                 PasswordHash = hash,
                 Ativo = dto.Ativo
             };

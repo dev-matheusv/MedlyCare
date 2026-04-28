@@ -11,6 +11,7 @@ public class UsuarioCreateValidator : AbstractValidator<UsuarioCreateDto>
     RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(200);
     RuleFor(x => x.Telefone).MaximumLength(20);
     RuleFor(x => x.CelularWhatsapp).MaximumLength(20);
+    RuleFor(x => x.Crm).MaximumLength(20);
     RuleFor(x => x.Password).NotEmpty().MinimumLength(6);
   }
 }
@@ -23,6 +24,7 @@ public class UsuarioUpdateValidator : AbstractValidator<UsuarioUpdateDto>
     RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(200);
     RuleFor(x => x.Telefone).MaximumLength(20);
     RuleFor(x => x.CelularWhatsapp).MaximumLength(20);
+    RuleFor(x => x.Crm).MaximumLength(20);
     RuleFor(x => x.Password)
       .MinimumLength(6)
       .When(x => !string.IsNullOrWhiteSpace(x.Password));
