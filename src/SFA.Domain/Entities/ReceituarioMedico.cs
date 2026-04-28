@@ -29,8 +29,8 @@ public class ReceituarioMedico
   public string? Observacoes { get; set; }
 
   public string AssinaturaNome { get; set; } = null!;
-  public string RegistroProfissional { get; set; } = null!;   // CRM/CRO/COREN etc
-  public string EnderecoProfissional { get; set; } = null!;
+  public string? RegistroProfissional { get; set; }   // CRM/CRO/COREN etc — preenchido automaticamente do usuário
+  public string? EnderecoProfissional { get; set; }   // Cidade/UF da empresa — preenchido automaticamente
 
   public bool Cancelado { get; set; }
   public string? MotivoCancelamento { get; set; }

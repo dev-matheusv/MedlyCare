@@ -17,9 +17,6 @@ public class ReceituarioMedicoCreateValidator : AbstractValidator<ReceituarioMed
       .Must(v => Enum.IsDefined(typeof(TipoReceituario), v))
       .WithMessage("tipo_receituario_invalido");
 
-    RuleFor(x => x.DataEmissao)
-      .NotEmpty();
-
     RuleFor(x => x.Diagnostico)
       .MaximumLength(1000)
       .When(x => x.Diagnostico is not null);
@@ -35,14 +32,6 @@ public class ReceituarioMedicoCreateValidator : AbstractValidator<ReceituarioMed
     RuleFor(x => x.AssinaturaNome)
       .NotEmpty().WithMessage("assinatura_nome_obrigatorio")
       .MaximumLength(200);
-
-    RuleFor(x => x.RegistroProfissional)
-      .NotEmpty().WithMessage("registro_profissional_obrigatorio")
-      .MaximumLength(20);
-
-    RuleFor(x => x.EnderecoProfissional)
-      .NotEmpty().WithMessage("endereco_profissional_obrigatorio")
-      .MaximumLength(300);
 
     RuleFor(x => x.Itens)
       .NotEmpty()

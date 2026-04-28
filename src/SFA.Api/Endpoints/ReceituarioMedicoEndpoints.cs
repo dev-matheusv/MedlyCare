@@ -89,18 +89,23 @@ public static class ReceituarioMedicoEndpoints
                 .Join(db.Pacientes.AsNoTracking(),
                     x => x.PacienteId,
                     p => p.Id,
-                    (x, p) => new ReceituarioMedicoListItemDto(
-                        x.Id,
-                        x.PacienteId,
-                        p.Nome,
-                        x.ProfissionalId,
-                        x.AtendimentoId,
-                        (int)x.TipoReceituario,
-                        x.DataEmissao,
-                        x.AssinaturaNome,
-                        x.RegistroProfissional,
-                        x.Cancelado,
-                        x.CriadoEm
+                    (x, p) => new { Receituario = x, NomePaciente = p.Nome })
+                .Join(db.Usuarios.AsNoTracking(),
+                    x => x.Receituario.ProfissionalId,
+                    us => us.Id,
+                    (x, us) => new ReceituarioMedicoListItemDto(
+                        x.Receituario.Id,
+                        x.Receituario.PacienteId,
+                        x.NomePaciente,
+                        x.Receituario.ProfissionalId,
+                        us.Nome,
+                        x.Receituario.AtendimentoId,
+                        (int)x.Receituario.TipoReceituario,
+                        x.Receituario.DataEmissao,
+                        x.Receituario.AssinaturaNome,
+                        x.Receituario.RegistroProfissional,
+                        x.Receituario.Cancelado,
+                        x.Receituario.CriadoEm
                     ))
                 .ToListAsync();
 
@@ -118,27 +123,32 @@ public static class ReceituarioMedicoEndpoints
                 .Join(db.Pacientes.AsNoTracking(),
                     x => x.PacienteId,
                     p => p.Id,
-                    (x, p) => new ReceituarioMedicoDetailsDto(
-                        x.Id,
-                        x.CodEmpresa,
-                        x.PacienteId,
-                        p.Nome,
-                        x.ProfissionalId,
-                        x.AtendimentoId,
-                        (int)x.TipoReceituario,
-                        x.DataEmissao,
-                        x.Diagnostico,
-                        x.InformarCid,
-                        x.Cid,
-                        x.Observacoes,
-                        x.AssinaturaNome,
-                        x.RegistroProfissional,
-                        x.EnderecoProfissional,
-                        x.Cancelado,
-                        x.MotivoCancelamento,
-                        x.CriadoEm,
-                        x.AtualizadoEm,
-                        x.Itens
+                    (x, p) => new { Receituario = x, NomePaciente = p.Nome })
+                .Join(db.Usuarios.AsNoTracking(),
+                    x => x.Receituario.ProfissionalId,
+                    us => us.Id,
+                    (x, us) => new ReceituarioMedicoDetailsDto(
+                        x.Receituario.Id,
+                        x.Receituario.CodEmpresa,
+                        x.Receituario.PacienteId,
+                        x.NomePaciente,
+                        x.Receituario.ProfissionalId,
+                        us.Nome,
+                        x.Receituario.AtendimentoId,
+                        (int)x.Receituario.TipoReceituario,
+                        x.Receituario.DataEmissao,
+                        x.Receituario.Diagnostico,
+                        x.Receituario.InformarCid,
+                        x.Receituario.Cid,
+                        x.Receituario.Observacoes,
+                        x.Receituario.AssinaturaNome,
+                        x.Receituario.RegistroProfissional,
+                        x.Receituario.EnderecoProfissional,
+                        x.Receituario.Cancelado,
+                        x.Receituario.MotivoCancelamento,
+                        x.Receituario.CriadoEm,
+                        x.Receituario.AtualizadoEm,
+                        x.Receituario.Itens
                             .Select(i => new ReceituarioMedicoItemDto(
                                 i.Id,
                                 i.NomeMedicamento,
@@ -195,12 +205,12 @@ public static class ReceituarioMedicoEndpoints
             if (!pacienteOk)
                 return Results.NotFound(new { message = "paciente_nao_encontrado" });
 
-            var profissionalOk = await db.Usuarios.AnyAsync(x =>
+            var profissional = await db.Usuarios.FirstOrDefaultAsync(x =>
                 x.Id == dto.ProfissionalId &&
                 x.CodEmpresa == codEmp &&
                 x.Ativo);
 
-            if (!profissionalOk)
+            if (profissional is null)
                 return Results.NotFound(new { message = "profissional_nao_encontrado" });
 
             if (dto.AtendimentoId.HasValue)
@@ -213,6 +223,14 @@ public static class ReceituarioMedicoEndpoints
                     return Results.NotFound(new { message = "atendimento_nao_encontrado" });
             }
 
+            var empresa = await db.Empresas
+                .AsNoTracking()
+                .FirstOrDefaultAsync(e => e.CodEmpresa == codEmp);
+
+            var enderecoProfissional = empresa is not null
+                ? $"{empresa.Cidade}/{empresa.Uf}"
+                : null;
+
             var entity = new ReceituarioMedico
             {
                 CodEmpresa = codEmp,
@@ -220,14 +238,14 @@ public static class ReceituarioMedicoEndpoints
                 ProfissionalId = dto.ProfissionalId,
                 AtendimentoId = dto.AtendimentoId,
                 TipoReceituario = (TipoReceituario)dto.TipoReceituario,
-                DataEmissao = dto.DataEmissao,
+                DataEmissao = DateTime.UtcNow,                  // automático
                 Diagnostico = dto.Diagnostico,
                 InformarCid = dto.InformarCid,
                 Cid = dto.InformarCid ? dto.Cid : null,
                 Observacoes = dto.Observacoes,
                 AssinaturaNome = dto.AssinaturaNome,
-                RegistroProfissional = dto.RegistroProfissional,
-                EnderecoProfissional = dto.EnderecoProfissional,
+                RegistroProfissional = profissional.Crm,        // automático do usuário
+                EnderecoProfissional = enderecoProfissional,    // automático da empresa
                 Cancelado = false,
                 CriadoEm = DateTime.UtcNow,
                 AtualizadoEm = DateTime.UtcNow,
@@ -525,8 +543,8 @@ public static class ReceituarioMedicoEndpoints
               <div class="assinatura">
                 <p>________________________________________</p>
                 <p><strong>{{System.Net.WebUtility.HtmlEncode(data.Receituario.AssinaturaNome)}}</strong></p>
-                <p>{{System.Net.WebUtility.HtmlEncode(data.Receituario.RegistroProfissional)}}</p>
-                <p>{{System.Net.WebUtility.HtmlEncode(data.Receituario.EnderecoProfissional)}}</p>
+                {{(string.IsNullOrWhiteSpace(data.Receituario.RegistroProfissional) ? "" : $"<p>CRM: {System.Net.WebUtility.HtmlEncode(data.Receituario.RegistroProfissional)}</p>")}}
+                {{(string.IsNullOrWhiteSpace(data.Receituario.EnderecoProfissional) ? "" : $"<p>{System.Net.WebUtility.HtmlEncode(data.Receituario.EnderecoProfissional)}</p>")}}
               </div>
             </body>
             </html>

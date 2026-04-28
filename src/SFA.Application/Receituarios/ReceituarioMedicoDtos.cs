@@ -39,11 +39,12 @@ public record ReceituarioMedicoListItemDto(
   Guid PacienteId,
   string NomePaciente,
   Guid ProfissionalId,
+  string NomeProfissional,
   Guid? AtendimentoId,
   int TipoReceituario,
   DateTime DataEmissao,
   string AssinaturaNome,
-  string RegistroProfissional,
+  string? RegistroProfissional,
   bool Cancelado,
   DateTime CriadoEm
 );
@@ -54,6 +55,7 @@ public record ReceituarioMedicoDetailsDto(
   Guid PacienteId,
   string NomePaciente,
   Guid ProfissionalId,
+  string NomeProfissional,
   Guid? AtendimentoId,
   int TipoReceituario,
   DateTime DataEmissao,
@@ -62,8 +64,8 @@ public record ReceituarioMedicoDetailsDto(
   string? Cid,
   string? Observacoes,
   string AssinaturaNome,
-  string RegistroProfissional,
-  string EnderecoProfissional,
+  string? RegistroProfissional,
+  string? EnderecoProfissional,
   bool Cancelado,
   string? MotivoCancelamento,
   DateTime CriadoEm,
@@ -76,14 +78,11 @@ public record ReceituarioMedicoCreateDto(
   Guid ProfissionalId,
   Guid? AtendimentoId,
   int TipoReceituario,
-  DateTime DataEmissao,
   string? Diagnostico,
   bool InformarCid,
   string? Cid,
   string? Observacoes,
   string AssinaturaNome,
-  string RegistroProfissional,
-  string EnderecoProfissional,
   List<ReceituarioMedicoCreateItemDto> Itens
 );
 

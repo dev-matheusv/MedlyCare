@@ -50,11 +50,9 @@ public class ReceituarioMedicoConfiguration : IEntityTypeConfiguration<Receituar
             .HasMaxLength(200);
 
         builder.Property(x => x.RegistroProfissional)
-            .IsRequired()
             .HasMaxLength(20);
 
         builder.Property(x => x.EnderecoProfissional)
-            .IsRequired()
             .HasMaxLength(300);
 
         builder.Property(x => x.Cancelado)
